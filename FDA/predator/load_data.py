@@ -3,16 +3,16 @@ import glob
 import numpy as np
 from sklearn.metrics import roc_auc_score
 
-# dataset_folder = '/data/datasets'
+dataset_folder = '/data/datasets'
 def load_source(train = 80000, valid = 400, test = 400, sig_rate = 0.035):
 # 	train = 80000
 # 	valid = 400
 # 	test = 400
 # 	sig_rate = 0.035
-	sig_file = '/shared/planck/Phantom/Breast_Xray/FDA_signals/hetero_sig.dat'
-	CLB_file = '/shared/rsaas/shenghua/CLB/CLB_128N_400000IM.npy'
-# 	sig_file = os.path.join(dataset_folder, 'FDA_signals/hetero_sig.dat')
-# 	CLB_file = os.path.join(dataset_folder, 'CLB/CLB_128N_400000IM.npy')
+# 	sig_file = '//data/datasets/FDA_signals/hetero_sig.dat'
+# 	CLB_file = '/data/datasets/CLB/CLB_128N_400000IM.npy'
+	sig_file = os.path.join(dataset_folder, 'FDA_signals/hetero_sig.dat')
+	CLB_file = os.path.join(dataset_folder, 'CLB/CLB_128N_400000IM.npy')
 	sig = np.fromfile(sig_file, dtype = np.float32).reshape(109,109)
 	data = np.load(CLB_file, mmap_mode='r')
 	X = data[:,:,0:train+valid+test]
@@ -28,8 +28,8 @@ def load_source(train = 80000, valid = 400, test = 400, sig_rate = 0.035):
 	return X_trn, X_val, X_tst, y_trn, y_val, y_tst
 
 def load_anomaly_data(dataset = 'total', train = 80000, valid = 400, test = 400):
-	X_SA = np.load('/shared/planck/Phantom/Breast_Xray/FDA_DM_ROIs/npy_dataset/{}_SA.npy'.format(dataset))
-	X_SP = np.load('/shared/planck/Phantom/Breast_Xray/FDA_DM_ROIs/npy_dataset/{}_SP.npy'.format(dataset))
+	X_SA = np.load('{}/FDA_DM_ROIs/npy_dataset/{}_SA.npy'.format(dataset_folder, dataset))
+	X_SP = np.load('{}/FDA_DM_ROIs/npy_dataset/{}_SP.npy'.format(dataset_folder, dataset))
 	if dataset == 'dense':
 		offset_valid = 7100
 	elif dataset == 'hetero':
@@ -55,8 +55,8 @@ def load_anomaly_data(dataset = 'total', train = 80000, valid = 400, test = 400)
 
 
 def load_target(dataset = 'total', train = 80000, valid = 400, test = 400):
-	X_SA = np.load('/shared/planck/Phantom/Breast_Xray/FDA_DM_ROIs/npy_dataset/{}_SA.npy'.format(dataset))
-	X_SP = np.load('/shared/planck/Phantom/Breast_Xray/FDA_DM_ROIs/npy_dataset/{}_SP.npy'.format(dataset))
+# 	X_SA = np.load('/data/datasets/FDA_DM_ROIs/npy_dataset/{}_SA.npy'.format(dataset))
+# 	X_SP = np.load('/data/datasets/FDA_DM_ROIs/npy_dataset/{}_SP.npy'.format(dataset))
 	if dataset == 'dense':
 		offset_valid = 7100
 	elif dataset == 'hetero':
@@ -68,8 +68,8 @@ def load_target(dataset = 'total', train = 80000, valid = 400, test = 400):
 	elif dataset == 'total':
 		offset_valid = 85000
 	offset_test = 400 + offset_valid
-# 	X_SA = np.load(os.path.join(dataset_folder, 'FDA_DM_ROIs/npy_dataset/{}_SA.npy'.format(dataset)))
-# 	X_SP = np.load(os.path.join(dataset_folder, 'FDA_DM_ROIs/npy_dataset/{}_SP.npy'.format(dataset)))
+	X_SA = np.load(os.path.join(dataset_folder, 'FDA_DM_ROIs/npy_dataset/{}_SA.npy'.format(dataset)))
+	X_SP = np.load(os.path.join(dataset_folder, 'FDA_DM_ROIs/npy_dataset/{}_SP.npy'.format(dataset)))
 	X_SA_trn, X_SA_val, X_SA_tst = X_SA[:train,:], X_SA[offset_valid:offset_valid+valid,:], X_SA[offset_test:offset_test+test,:]
 	X_SP_trn, X_SP_val, X_SP_tst = X_SP[:train,:], X_SP[offset_valid:offset_valid+valid,:], X_SP[offset_test:offset_test+test,:]
 	X_trn, X_val, X_tst = np.concatenate([X_SA_trn, X_SP_trn]), np.concatenate([X_SA_val, X_SP_val]), np.concatenate([X_SA_tst, X_SP_tst])
