@@ -12,13 +12,16 @@ from sklearn.metrics import roc_auc_score
 import scipy.io
 
 from load_data import *
-from model import *
+from models import *
 
 ## load dataset
-X_SA_trn, X_SA_val, X_SA_tst, X_SP_tst = load_anomaly_data(dataset = 'dense', train = 7100, valid = 400, test = 400)
+X_SA_trn, X_SA_val, X_SA_tst, X_SP_tst = load_anomaly_data(dataset = 'dense', train = 1000, valid = 400, test = 400)
 
-def lrelu(x, alpha=0.2):
-  return tf.nn.relu(x) - alpha * tf.nn.relu(-x)
+## Padding the image to the shape 128x128
+X_SA_trn, X_SA_val, X_SA_tst, X_SP_tst = np.pad(X_SA_trn, ((10,9),(10,9)), 'mean'), np.pad(X_SA_trn, ((10,9),(10,9)), 'mean'), np.pad(X_SA_trn, ((10,9),(10,9)), 'mean')
+
+x = tf.placeholder("float", shape=[None, 128,128, 1])
+y = auto_encoder()
 
 def autoencoder(input_shape=[None, 109, 109, 1], n_filters=[1, 32, 32, 32], filter_sizes=[5, 5, 5, 5]):
 	input_shape=[None, 109, 109]
