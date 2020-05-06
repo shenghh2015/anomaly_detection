@@ -1,2 +1,2 @@
 chcon -Rt svirt_sandbox_file_t /shared2/Data_FDA_Breast/Anom_Detection
-docker run --gpus 0 -v /shared2/Data_FDA_Breast/Observer:/data -w /data/DA_Observer/CLB_FDA/predator/ -it --user $(id -u):$(id -g) shenghh2020/tf_gpu_py3.5:latest
+docker run --gpus all -v /shared2/Data_FDA_Breast/Anom_Detection:/data -w /data/anomaly_detection/FDA/predator/ -it --user $(id -u):$(id -g) shenghh2020/tf_gpu_py3.5:latest
