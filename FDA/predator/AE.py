@@ -87,6 +87,7 @@ def plot_hist(file_name, x, y):
 	ax.set_ylabel('Probalbity')
 	ax.legend(['Norm', 'Anomaly'])
 	ax.set_xlim([np.min(np.concatenate([x,y])), np.max(np.concatenate([x,y]))])
+	canvas = FigureCanvasAgg(fig)
 	canvas.print_figure(file_name, dpi=100)
 
 def plot_AUC(file_name, auc_list):
