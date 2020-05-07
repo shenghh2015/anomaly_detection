@@ -195,7 +195,7 @@ with tf.Session() as sess:
 			print_block(symbol = '-', nb_sybl = 50)
 			print_yellow('RE: train {0:.4f}, val {1:.4f}, normal {2:.4f}, abnormal {3:.4f}; AUC: test {4:.4f}'.\
 					format(trn_err, val_err, tst_SA_err, tst_SP_err, test_auc))
-			print(model)
+			print(model_name)
 			# save model
 			saver.save(sess, model_folder +'/model', global_step= iteration)
 			# save results
