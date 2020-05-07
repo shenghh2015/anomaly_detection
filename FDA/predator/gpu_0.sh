@@ -13,4 +13,4 @@
 # parser.add_argument("--dataset", type=str, default = 'total')
 # parser.add_argument("--train", type=int, default = 100000)
 
-python AE.py --gpu 0 --cn 6 --fr 32 --ks 5 --bn True --lr 1e-5 --step 100000 --bz 100 --train 85000
+python AE.py --gpu 0 --cn 6 --fr 32 --ks 5 --bn True --lr 1e-5 --step 100000 --bz 100 --train 33000 --dataset scattered
