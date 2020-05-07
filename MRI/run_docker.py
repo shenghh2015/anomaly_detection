@@ -19,3 +19,4 @@ command_str = 'docker run --gpus all -v {0:}:/data -w /data/anomaly_detection/MR
 print(command_str)
 os.system(command_str)
 
+
