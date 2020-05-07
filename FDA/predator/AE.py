@@ -15,6 +15,9 @@ from load_data import *
 from models import *
 
 ## functions
+def str2bool(value):
+    return value.lower() == 'true'
+
 def normalize_0_1(data):
 	data = np.squeeze(data)
 	shp = data.shape
