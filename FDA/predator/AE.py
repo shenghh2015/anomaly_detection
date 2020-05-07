@@ -121,8 +121,9 @@ skip = args.skp
 residual = args.res
 lr = args.lr
 nb_steps = args.step
-dataset = args.dataset
 batch_size = args.bz
+dataset = args.dataset
+train = args.train
 
 os.environ["CUDA_VISIBLE_DEVICES"] = str(gpu)
 
