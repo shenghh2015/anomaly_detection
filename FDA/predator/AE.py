@@ -212,6 +212,6 @@ with tf.Session() as sess:
 			plot_AUC(auc_file, auc_list)
 			if best_val_err > val_err:
 				best_val_err = val_err
-				np.savetxt(os.path.join(model_folder,'best_auc.txt'),sC_loss_list)
+				np.savetxt(os.path.join(model_folder,'best_auc.txt'),auc_list)
 				saver.save(sess, model_folder +'/best', global_step= iteration)
 				print_red('update best: {}'.format(model_name))
