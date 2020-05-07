@@ -66,7 +66,7 @@ def plot_LOSS(file_name, skip_points, train_loss_list, val_loss_list, norm_loss_
 	ax.set_xlabel('Iterations/100')
 	ax.set_ylabel('log(mse)')
 	ax.legend(['Train','Valid','T-norm', 'T-Abnorm'])
-	ax.set_xlim([0,len(train_list)])
+	ax.set_xlim([0,len(train_loss_list)])
 	canvas = FigureCanvasAgg(fig)
 	canvas.print_figure(file_name, dpi=100)
 
@@ -84,7 +84,7 @@ def plot_AUC(file_name, auc_list):
 	ax.set_xlabel('Interations/100')
 	ax.set_ylabel('AUC')
 	ax.legend(['Detection'])
-	ax.set_xlim([0,len(train_list)])
+	ax.set_xlim([0,len(auc_list)])
 	canvas = FigureCanvasAgg(fig)
 	canvas.print_figure(file_name, dpi=100)
 
