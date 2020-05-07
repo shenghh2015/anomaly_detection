@@ -10,6 +10,7 @@ from termcolor import colored
 import argparse
 from sklearn.metrics import roc_auc_score
 import scipy.io
+import scipy.misc as misc
 
 from load_data import *
 from models import *
@@ -93,7 +94,6 @@ def plot_hist(file_name, x, y):
 	canvas.print_figure(file_name, dpi=100)
 
 def plot_AUC(file_name, auc_list):
-	import matplotlib.pyplot as plt
 	from matplotlib.backends.backend_agg import FigureCanvasAgg
 	from matplotlib.figure import Figure
 	fig_size = (8,6)
@@ -110,6 +110,27 @@ def plot_AUC(file_name, auc_list):
 	canvas = FigureCanvasAgg(fig)
 	canvas.print_figure(file_name, dpi=100)
 
+def save_recon_images(img_file_name, imgs, recons, errs, fig_size):
+	from matplotlib.backends.backend_agg import FigureCanvasAgg
+	from matplotlib.figure import Figure
+	imgs, recons, errs = np.squeeze(imgs), np.squeeze(recons), np.squeeze(errs)
+	test_size = imgs.shape[0]
+	indx = np.random.randint(0,int(test_size/2))
+	f, f_MP = imgs[indx,:,:], imgs[int(test_size/2)+indx,:,:]
+	f_recon, f_MP_recon = recons[indx,:,:], recons[int(test_size/2)+indx,:,:]
+	f_recon_err, f_MP_recon_err = errs[indx,:,:], errs[int(test_size/2)+indx,:,:]
+# 	fig_size = (8,6)
+	fig_size = fig_size
+	fig = Figure(figsize=fig_size)
+	rows, cols = 2, 3
+	ax = fig.add_subplot(rows, cols, 1); cax=ax.imshow(f,cmap='gray'); fig.colorbar(cax); ax.set_title('Image'); ax.set_ylabel('f') 
+	ax = fig.add_subplot(rows, cols, 2); cax=ax.imshow(f_recon,cmap='gray'); fig.colorbar(cax); ax.set_title('Recon');
+	ax = fig.add_subplot(rows, cols, 3); cax=ax.imshow(f_recon_err,cmap='gray'); fig.colorbar(cax); ax.set_title('Error');
+	ax = fig.add_subplot(rows, cols, 4); cax=ax.imshow(f_MP,cmap='gray'); fig.colorbar(cax); ax.set_ylabel('f_MP')
+	ax = fig.add_subplot(rows, cols, 5); cax=ax.imshow(f_MP_recon,cmap='gray'); fig.colorbar(cax);
+	ax = fig.add_subplot(rows, cols, 6); cax=ax.imshow(f_MP_recon_err,cmap='gray'); fig.colorbar(cax);
+	canvas = FigureCanvasAgg(fig)
+	canvas.print_figure(img_file_name, dpi=100)
 
 def generate_folder(folder):
 	if not os.path.exists(folder):
@@ -118,7 +139,7 @@ def generate_folder(folder):
 parser = argparse.ArgumentParser()
 parser.add_argument("--gpu", type=int, default = 0)
 parser.add_argument("--docker", type = str2bool, default = True)
-parser.add_argument("--cn", type=int, default = 6)
+parser.add_argument("--cn", type=int, default = 4)
 parser.add_argument("--fr", type=int, default = 32)
 parser.add_argument("--ks", type=int, default = 5)
 parser.add_argument("--bn", type=str2bool, default = True)
@@ -126,7 +147,7 @@ parser.add_argument("--skp", type=str2bool, default = False)
 parser.add_argument("--res", type=str2bool, default = False)
 parser.add_argument("--lr", type=float, default = 1e-3)
 parser.add_argument("--step", type=int, default = 1000)
-parser.add_argument("--bz", type=int, default = 200)
+parser.add_argument("--bz", type=int, default = 50)
 # parser.add_argument("--dataset", type=str, default = 'dense')
 parser.add_argument("--train", type=int, default = 65000)
 
@@ -159,6 +180,8 @@ model_name = 'AE-{}-cn-{}-fr-{}-ks-{}-bn-{}-skp-{}-res-{}-lr-{}-stps-{}-bz-{}'.f
 model_folder = os.path.join(output_folder, model_name)
 generate_folder(model_folder)
 
+#image size
+img_size = 256
 ## load dataset
 # X_SA_trn, X_SA_val, X_SA_tst, X_SP_tst = load_anomaly_data(dataset = dataset, train = train, valid = 400, test = 400)
 X_SA_trn, X_SA_val, X_SA_tst, X_SP_tst = load_MRI_true_data(docker = docker, train = train, val = 200, normal = 200, anomaly = 200)
@@ -201,7 +224,7 @@ auc_list = []
 
 # nb_steps = 100
 best_val_err = np.inf
-# sess = tf.Session()
+sess = tf.Session()
 with tf.Session() as sess:
 	tf.global_variables_initializer().run(session=sess)
 	for iteration in range(nb_steps):
@@ -213,8 +236,12 @@ with tf.Session() as sess:
 			val_err = cost.eval(session = sess, feed_dict = {x:X_SA_val})
 			tst_SA_err = cost.eval(session = sess, feed_dict = {x:X_SA_tst})
 			tst_SP_err = cost.eval(session = sess, feed_dict = {x:X_SP_tst})
+			y_recon = y.eval(session = sess, feed_dict = {x:Xt})			
 			tst_pixel_errs = sqr_err.eval(session = sess, feed_dict = {x:Xt})
 			tst_img_errs = np.squeeze(np.apply_over_axes(np.mean, tst_pixel_errs, axes = [1,2,3]))
+			if np.isnan(np.sum(tst_img_errs)):
+				print_green('Pass!!!')
+				continue
 			test_auc = roc_auc_score(yt, tst_img_errs)
 			print_block(symbol = '-', nb_sybl = 50)
 			print_yellow('RE: train {0:.4f}, val {1:.4f}, normal {2:.4f}, abnormal {3:.4f}; AUC: test {4:.4f}; iter {5:}'.\
@@ -242,3 +269,6 @@ with tf.Session() as sess:
 				plot_hist(hist_file, tst_SA_err.flatten(), tst_SP_err.flatten())
 				saver.save(sess, model_folder +'/best', global_step= iteration)
 				print_red('update best: {}'.format(model_name))
+				# save reconstructed images
+				img_file_name = os.path.join(model_folder,'recon-{}.png'.format(model_name))
+				save_recon_images(img_file_name, Xt, y_recon, tst_pixel_errs, fig_size = [12,6])
