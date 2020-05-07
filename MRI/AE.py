@@ -79,8 +79,8 @@ def plot_hist(file_name, x, y):
 	fig = Figure(figsize=fig_size)
 	file_name = file_name
 	ax = fig.add_subplot(111)
-	x = np.exp(-x)
-	y = np.exp(-y)
+# 	x = np.exp(-x)
+# 	y = np.exp(-y)
 	ax.hist(x, **kwargs, color='g', label='Norm')
 	ax.hist(y, **kwargs, color='r', label='Anomaly')
 	title = os.path.basename(os.path.dirname(file_name))
@@ -224,8 +224,8 @@ with tf.Session() as sess:
 			saver.save(sess, model_folder +'/model', global_step= iteration)
 			# save results
 			trn_err_list, val_err_list, norm_err_list, anomaly_err_list, auc_list =\
-				np.append(trn_err_list, np.log(trn_err)), np.append(val_err_list, np.log(val_err)),\
-					np.append(norm_err_list, np.log(tst_SA_err)), np.append(anomaly_err_list, np.log(tst_SP_err)), np.append(auc_list, test_auc)
+				np.append(trn_err_list, trn_err), np.append(val_err_list, val_err),\
+					np.append(norm_err_list, tst_SA_err), np.append(anomaly_err_list, tst_SP_err), np.append(auc_list, test_auc)
 			np.savetxt(os.path.join(model_folder,'train_loss.txt'), trn_err_list)
 			np.savetxt(os.path.join(model_folder,'val_loss.txt'), val_err_list)
 			np.savetxt(os.path.join(model_folder,'norm_loss.txt'), norm_err_list)
