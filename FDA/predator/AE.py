@@ -79,6 +79,8 @@ def plot_hist(file_name, x, y):
 	fig = Figure(figsize=fig_size)
 	file_name = file_name
 	ax = fig.add_subplot(111)
+	x = np.log(x)
+	y = np.log(y)
 	ax.hist(x, **kwargs, color='g', label='Norm')
 	ax.hist(y, **kwargs, color='r', label='Anomaly')
 	title = os.path.basename(os.path.dirname(file_name))
