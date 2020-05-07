@@ -208,7 +208,7 @@ with tf.Session() as sess:
 		indices = np.random.randint(0, X_SA_trn.shape[0]-1, batch_size)
 		batch_x = X_SA_trn[indices,:]
 		sess.run(trn_step, feed_dict={x: batch_x})
-		if iteration%100 == 0:
+		if iteration%5 == 0:
 			trn_err = cost.eval(session = sess, feed_dict = {x:batch_x})
 			val_err = cost.eval(session = sess, feed_dict = {x:X_SA_val})
 			tst_SA_err = cost.eval(session = sess, feed_dict = {x:X_SA_tst})
