@@ -222,9 +222,9 @@ norm_err_list = []
 anomaly_err_list = []
 auc_list = []
 
-nb_steps = 100
+nb_steps = 5000
 best_val_err = np.inf
-sess = tf.Session()
+# sess = tf.Session()
 with tf.Session() as sess:
 	tf.global_variables_initializer().run(session=sess)
 	for iteration in range(nb_steps):
