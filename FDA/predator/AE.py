@@ -165,7 +165,7 @@ residual = args.res
 lr = args.lr
 nb_steps = args.step
 batch_size = args.bz
-# dataset = args.dataset
+dataset = args.dataset
 train = args.train
 
 os.environ["CUDA_VISIBLE_DEVICES"] = str(gpu)
