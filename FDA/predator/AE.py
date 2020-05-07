@@ -104,7 +104,7 @@ parser.add_argument("--skp", type=str2bool, default = False)
 parser.add_argument("--res", type=str2bool, default = False)
 parser.add_argument("--lr", type=float, default = 1e-3)
 parser.add_argument("--step", type=int, default = 1000)
-parser.add_argument("--bz", type=int, default = 600)
+parser.add_argument("--bz", type=int, default = 400)
 parser.add_argument("--dataset", type=str, default = 'dense')
 parser.add_argument("--train", type=int, default = 100000)
 
