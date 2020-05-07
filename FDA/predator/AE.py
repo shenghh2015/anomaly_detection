@@ -45,7 +45,7 @@ def print_green(str):
 	print(colored(str, 'green'))
 
 def print_block(symbol = '*', nb_sybl = 70):
-	print_red(symbol*nb_sybl)
+	print_green(symbol*nb_sybl)
 
 def plot_LOSS(file_name, skip_points, train_loss_list, val_loss_list, norm_loss_list, abnorm_loss_list):
 	import matplotlib.pyplot as plt
@@ -192,9 +192,10 @@ with tf.Session() as sess:
 			tst_pixel_errs = sqr_err.eval(session = sess, feed_dict = {x:Xt})
 			tst_img_errs = np.squeeze(np.apply_over_axes(np.mean, tst_pixel_errs, axes = [1,2,3]))
 			test_auc = roc_auc_score(yt, tst_img_errs)
+			print_block(symbol = '-', nb_sybl = 50)
 			print_yellow('RE: train {0:.4f}, val {1:.4f}, normal {2:.4f}, abnormal {3:.4f}; AUC: test {4:.4f}'.\
 					format(trn_err, val_err, tst_SA_err, tst_SP_err, test_auc))
-			print()
+			print(model)
 			# save model
 			saver.save(sess, model_folder +'/model', global_step= iteration)
 			# save results
