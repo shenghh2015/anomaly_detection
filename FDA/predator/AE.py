@@ -70,6 +70,25 @@ def plot_LOSS(file_name, skip_points, train_loss_list, val_loss_list, norm_loss_
 	canvas = FigureCanvasAgg(fig)
 	canvas.print_figure(file_name, dpi=100)
 
+def plot_hist(file_name, x, y):
+	import matplotlib.pyplot as plt
+	from matplotlib.backends.backend_agg import FigureCanvasAgg
+	from matplotlib.figure import Figure
+	kwargs = dict(alpha=0.6, bins=50, density=True, stacked=True)
+	fig_size = (8,6)
+	fig = Figure(figsize=fig_size)
+	file_name = file_name
+	ax = fig.add_subplot(111)
+	ax.hist(x, **kwargs, color='g', label='Norm')
+	ax.hist(y, **kwargs, color='r', label='Anomaly')
+	title = os.path.basename(os.path.dirname(file_name))
+	ax.set_title(title)
+	ax.set_xlabel('Error')
+	ax.set_ylabel('Probalbity')
+	ax.legend(['Norm', 'Anomaly'])
+	ax.set_xlim([np.min(np.concatenate([x,y])), np.max(np.concatenate([x,y]))])
+	canvas.print_figure(file_name, dpi=100)
+
 def plot_AUC(file_name, auc_list):
 	import matplotlib.pyplot as plt
 	from matplotlib.backends.backend_agg import FigureCanvasAgg
@@ -140,7 +159,7 @@ generate_folder(model_folder)
 ## load dataset
 X_SA_trn, X_SA_val, X_SA_tst, X_SP_tst = load_anomaly_data(dataset = dataset, train = train, valid = 400, test = 400)
 # 0-1 normalization
-X_SA_trn, X_SA_val, X_SA_tst, X_SP_tst = normalize_0_1(X_SA_trn), normalize_0_1(X_SA_val), normalize_0_1(X_SA_tst), normalize_0_1(X_SA_val)
+X_SA_trn, X_SA_val, X_SA_tst, X_SP_tst = normalize_0_1(X_SA_trn), normalize_0_1(X_SA_val), normalize_0_1(X_SA_tst), normalize_0_1(X_SP_tst)
 # padding into 128x128 pixels
 X_SA_trn, X_SA_val, X_SA_tst, X_SP_tst = pad_128(X_SA_trn), pad_128(X_SA_val), pad_128(X_SA_tst), pad_128(X_SP_tst)
 
@@ -214,5 +233,7 @@ with tf.Session() as sess:
 			if best_val_err > val_err:
 				best_val_err = val_err
 				np.savetxt(os.path.join(model_folder,'best_auc.txt'),auc_list)
+				hist_file = os.path.join(model_folder,'AE-hist-{}.png'.format(model_name))
+				plot_hist(hist_file, tst_SA_err.flatten(), tst_SP_err.flatten())
 				saver.save(sess, model_folder +'/best', global_step= iteration)
 				print_red('update best: {}'.format(model_name))
