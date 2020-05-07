@@ -79,8 +79,8 @@ def plot_hist(file_name, x, y):
 	fig = Figure(figsize=fig_size)
 	file_name = file_name
 	ax = fig.add_subplot(111)
-	x = np.log(x)
-	y = np.log(y)
+	x = np.exp(-x)
+	y = np.exp(-y)
 	ax.hist(x, **kwargs, color='g', label='Norm')
 	ax.hist(y, **kwargs, color='r', label='Anomaly')
 	title = os.path.basename(os.path.dirname(file_name))
@@ -127,7 +127,7 @@ parser.add_argument("--res", type=str2bool, default = False)
 parser.add_argument("--lr", type=float, default = 1e-3)
 parser.add_argument("--step", type=int, default = 1000)
 parser.add_argument("--bz", type=int, default = 200)
-parser.add_argument("--dataset", type=str, default = 'dense')
+# parser.add_argument("--dataset", type=str, default = 'dense')
 parser.add_argument("--train", type=int, default = 100000)
 
 args = parser.parse_args()
@@ -144,27 +144,28 @@ residual = args.res
 lr = args.lr
 nb_steps = args.step
 batch_size = args.bz
-dataset = args.dataset
+# dataset = args.dataset
 train = args.train
 
 os.environ["CUDA_VISIBLE_DEVICES"] = str(gpu)
 
 if docker:
-	output_folder = '/data/results/FDA'
+	output_folder = '/data/results/MRI'
 else:
-	output_folder = './data/FDA'
+	output_folder = './data/MRI'
 
 ## model folder
-model_name = 'AE-cn-{}-fr-{}-ks-{}-bn-{}-skp-{}-res-{}-lr-{}-stps-{}-bz-{}'.format(nb_cnn, filters, kernel_size, batch_norm, skip, residual, lr, nb_steps, batch_size)
+model_name = 'AE-{}-cn-{}-fr-{}-ks-{}-bn-{}-skp-{}-res-{}-lr-{}-stps-{}-bz-{}'.format(os.path.basename(output_folder), nb_cnn, filters, kernel_size, batch_norm, skip, residual, lr, nb_steps, batch_size)
 model_folder = os.path.join(output_folder, model_name)
 generate_folder(model_folder)
 
 ## load dataset
-X_SA_trn, X_SA_val, X_SA_tst, X_SP_tst = load_anomaly_data(dataset = dataset, train = train, valid = 400, test = 400)
+# X_SA_trn, X_SA_val, X_SA_tst, X_SP_tst = load_anomaly_data(dataset = dataset, train = train, valid = 400, test = 400)
+X_SA_trn, X_SA_val, X_SA_tst, X_SP_tst = load_MRI_true_data(docker = docker, train = 65000, val = 600, normal = 1000, anomaly = 1000)
 # 0-1 normalization
 X_SA_trn, X_SA_val, X_SA_tst, X_SP_tst = normalize_0_1(X_SA_trn), normalize_0_1(X_SA_val), normalize_0_1(X_SA_tst), normalize_0_1(X_SP_tst)
 # padding into 128x128 pixels
-X_SA_trn, X_SA_val, X_SA_tst, X_SP_tst = pad_128(X_SA_trn), pad_128(X_SA_val), pad_128(X_SA_tst), pad_128(X_SP_tst)
+# X_SA_trn, X_SA_val, X_SA_tst, X_SP_tst = pad_128(X_SA_trn), pad_128(X_SA_val), pad_128(X_SA_tst), pad_128(X_SP_tst)
 
 ## test data
 Xt = np.concatenate([X_SA_tst, X_SP_tst], axis = 0)
@@ -176,7 +177,7 @@ X_SA_trn, X_SA_val, X_SA_tst, X_SP_tst, Xt = np.expand_dims(X_SA_trn, axis = 3),
 
 # create the graph
 scope = 'base'
-x = tf.placeholder("float", shape=[None, 128,128, 1])
+x = tf.placeholder("float", shape=[None, 256, 256, 1])
 h1, h2, y = auto_encoder(x, nb_cnn = nb_cnn, bn = batch_norm, filters = filters, kernel_size = [kernel_size, kernel_size], scope_name = scope)
 sqr_err = tf.square(y - x)
 cost = tf.reduce_sum(sqr_err)
@@ -229,14 +230,14 @@ with tf.Session() as sess:
 			np.savetxt(os.path.join(model_folder,'norm_loss.txt'), norm_err_list)
 			np.savetxt(os.path.join(model_folder,'anomaly_loss.txt'),anomaly_err_list)
 			np.savetxt(os.path.join(model_folder,'test_auc.txt'),auc_list)
-			loss_file = os.path.join(model_folder,'AE-loss-{}.png'.format(model_name))
+			loss_file = os.path.join(model_folder,'loss-{}.png'.format(model_name))
 			plot_LOSS(loss_file, 0, trn_err_list, val_err_list, norm_err_list, anomaly_err_list)
-			auc_file = os.path.join(model_folder,'AE-auc-{}.png'.format(model_name))
+			auc_file = os.path.join(model_folder,'auc-{}.png'.format(model_name))
 			plot_AUC(auc_file, auc_list)
 			if best_val_err > val_err:
 				best_val_err = val_err
 				np.savetxt(os.path.join(model_folder,'best_auc.txt'),auc_list)
-				hist_file = os.path.join(model_folder,'AE-hist-{}.png'.format(model_name))
+				hist_file = os.path.join(model_folder,'hist-{}.png'.format(model_name))
 				plot_hist(hist_file, tst_SA_err.flatten(), tst_SP_err.flatten())
 				saver.save(sess, model_folder +'/best', global_step= iteration)
 				print_red('update best: {}'.format(model_name))
