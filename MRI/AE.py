@@ -128,7 +128,7 @@ parser.add_argument("--lr", type=float, default = 1e-3)
 parser.add_argument("--step", type=int, default = 1000)
 parser.add_argument("--bz", type=int, default = 200)
 # parser.add_argument("--dataset", type=str, default = 'dense')
-parser.add_argument("--train", type=int, default = 100000)
+parser.add_argument("--train", type=int, default = 65000)
 
 args = parser.parse_args()
 print(args)
@@ -161,7 +161,7 @@ generate_folder(model_folder)
 
 ## load dataset
 # X_SA_trn, X_SA_val, X_SA_tst, X_SP_tst = load_anomaly_data(dataset = dataset, train = train, valid = 400, test = 400)
-X_SA_trn, X_SA_val, X_SA_tst, X_SP_tst = load_MRI_true_data(docker = docker, train = 65000, val = 600, normal = 1000, anomaly = 1000)
+X_SA_trn, X_SA_val, X_SA_tst, X_SP_tst = load_MRI_true_data(docker = docker, train = train, val = 600, normal = 1000, anomaly = 1000)
 # 0-1 normalization
 X_SA_trn, X_SA_val, X_SA_tst, X_SP_tst = normalize_0_1(X_SA_trn), normalize_0_1(X_SA_val), normalize_0_1(X_SA_tst), normalize_0_1(X_SP_tst)
 # padding into 128x128 pixels
