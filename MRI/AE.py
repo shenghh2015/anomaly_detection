@@ -116,7 +116,7 @@ def generate_folder(folder):
 		os.system('mkdir -p {}'.format(folder))
 
 parser = argparse.ArgumentParser()
-parser.add_argument("--gpu", type=int, default = 1)
+parser.add_argument("--gpu", type=int, default = 0)
 parser.add_argument("--docker", type = str2bool, default = True)
 parser.add_argument("--cn", type=int, default = 6)
 parser.add_argument("--fr", type=int, default = 32)
@@ -180,7 +180,7 @@ scope = 'base'
 x = tf.placeholder("float", shape=[None, 256, 256, 1])
 h1, h2, y = auto_encoder(x, nb_cnn = nb_cnn, bn = batch_norm, filters = filters, kernel_size = [kernel_size, kernel_size], scope_name = scope)
 sqr_err = tf.square(y - x)
-cost = tf.reduce_sum(sqr_err)
+cost = tf.reduce_mean(sqr_err)
 
 # create a saver
 vars_list = tf.trainable_variables(scope)
@@ -201,6 +201,7 @@ auc_list = []
 
 # nb_steps = 100
 best_val_err = np.inf
+# sess = tf.Session()
 with tf.Session() as sess:
 	tf.global_variables_initializer().run(session=sess)
 	for iteration in range(nb_steps):
