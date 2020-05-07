@@ -44,7 +44,7 @@ def print_green(str):
 def print_block(symbol = '*', nb_sybl = 70):
 	print_red(symbol*nb_sybl)
 
-def plot_LOSS(file_name, skip_points = 0, train_loss_list, val_loss_list, norm_loss_list, abnorm_loss_list):
+def plot_LOSS(file_name, train_loss_list, val_loss_list, norm_loss_list, abnorm_loss_list):
 	import matplotlib.pyplot as plt
 	from matplotlib.backends.backend_agg import FigureCanvasAgg
 	from matplotlib.figure import Figure
@@ -91,7 +91,7 @@ def generate_folder(folder):
 		os.system('mkdir -p {}'.format(folder))
 
 parser = argparse.ArgumentParser()
-parser.add_argument("--gpu", type=int, default = 0)
+parser.add_argument("--gpu", type=int, default = 1)
 parser.add_argument("--docker", type = str2bool, default = True)
 parser.add_argument("--cn", type=int, default = 6)
 parser.add_argument("--fr", type=int, default = 32)
