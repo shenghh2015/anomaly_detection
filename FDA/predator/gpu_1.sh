@@ -1,1 +1,1 @@
-python AE.py --gpu 0 --cn 8 --fr 32 --ks 5 --bn True --lr 1e-5 --step 100000 --bz 100 --train 33000 --dataset scattered
+python AE.py --gpu 1 --cn 8 --fr 32 --ks 5 --bn True --lr 1e-5 --step 100000 --bz 100 --train 33000 --dataset scattered
