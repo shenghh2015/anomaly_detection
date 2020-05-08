@@ -153,6 +153,7 @@ parser.add_argument("--bz", type=int, default = 50)
 parser.add_argument("--train", type=int, default = 65000)
 parser.add_argument("--val", type=int, default = 200)
 parser.add_argument("--test", type=int, default = 200)
+parser.add_argument("--noise_rate", type=float, default = 0.01)
 
 args = parser.parse_args()
 print(args)
