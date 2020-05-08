@@ -151,6 +151,8 @@ parser.add_argument("--step", type=int, default = 1000)
 parser.add_argument("--bz", type=int, default = 50)
 # parser.add_argument("--dataset", type=str, default = 'dense')
 parser.add_argument("--train", type=int, default = 65000)
+parser.add_argument("--val", type=int, default = 200)
+parser.add_argument("--test", type=int, default = 200)
 
 args = parser.parse_args()
 print(args)
@@ -168,6 +170,8 @@ nb_steps = args.step
 batch_size = args.bz
 # dataset = args.dataset
 train = args.train
+val = args.val
+test = args.test
 
 os.environ["CUDA_VISIBLE_DEVICES"] = str(gpu)
 
@@ -177,7 +181,7 @@ else:
 	output_folder = './data/MRI'
 
 ## model folder
-model_name = 'AE-{}-cn-{}-fr-{}-ks-{}-bn-{}-skp-{}-res-{}-lr-{}-stps-{}-bz-{}'.format(os.path.basename(output_folder), nb_cnn, filters, kernel_size, batch_norm, skip, residual, lr, nb_steps, batch_size)
+model_name = 'AE-{}-cn-{}-fr-{}-ks-{}-bn-{}-skp-{}-res-{}-lr-{}-stps-{}-bz-{}-tr-{}k-vl-{}-test-{}'.format(os.path.basename(output_folder), nb_cnn, filters, kernel_size, batch_norm, skip, residual, lr, nb_steps, batch_size, int(train/1000), val, test)
 model_folder = os.path.join(output_folder, model_name)
 generate_folder(model_folder)
 
