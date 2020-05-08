@@ -13,7 +13,7 @@ dim = 256 # Image dimensions: dimxdim
 images = np.load(dataset_folder+'/axial_batch2_256x256.npy')
 
 f_MP_list = []
-for i in range(images.shape[0])
+for i in range(images.shape[0]):
 	f = images[i,:,:]
 
 	# Load the undersampling mask
