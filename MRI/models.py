@@ -60,5 +60,7 @@ def auto_encoder(x, nb_cnn = 4, bn = False, filters = 32, kernel_size = [5,5], s
 	with tf.variable_scope(scope_name, reuse = reuse):
 		h1 = conv_block(x, nb_cnn = nb_cnn, bn = bn, filters = filters, kernel_size = kernel_size, scope_name = 'encoder')
 		h2 = up_conv_block(h1, nb_cnn = nb_cnn, bn = bn, filters = filters, kernel_size = kernel_size, scope_name = 'decoder')
-		y = _conv_bn_lrelu_pool(h2, filters = filters, kernel_size = kernel_size, pool = False, bn = bn)
+# 		y = tf.layers.conv2d(h2, filters = 1, kernel_size = kernel_size, strides=(1, 1), padding='same',
+# 					kernel_initializer= 'truncated_normal', kernel_regularizer=l2_regularizer)
+		y = _conv_bn_lrelu_pool(x, filters = 1, kernel_size = kernel_size, pool = False, bn = bn)
 	return h1, h2, y
