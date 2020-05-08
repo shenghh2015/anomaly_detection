@@ -28,7 +28,8 @@ def normalize_0_1(data):
 	data = (data - np.amin(np.amin(data, axis = -1), axis = -1).reshape(_shp))/\
 			(np.amax(np.amax(data, axis = -1), axis = -1).reshape(_shp)-\
 			np.amin(np.amin(data, axis = -1), axis = -1).reshape(_shp))
-	return data
+	image_sum = np.squeeze(np.apply_over_axes(np.sum, data, axes = [1,2]))
+	return data[~np.isnan(image_sum),:]
 
 def pad_128(data):
 	return np.pad(data, ((0,0),(10,9),(10,9)), 'mean')
@@ -75,7 +76,7 @@ def plot_hist(file_name, x, y):
 	import matplotlib.pyplot as plt
 	from matplotlib.backends.backend_agg import FigureCanvasAgg
 	from matplotlib.figure import Figure
-	kwargs = dict(alpha=0.6, bins=100, density=False, stacked=True)
+	kwargs = dict(alpha=0.6, bins=100, density= False, stacked=True)
 	fig_size = (8,6)
 	fig = Figure(figsize=fig_size)
 	file_name = file_name
@@ -145,7 +146,7 @@ parser.add_argument("--ks", type=int, default = 5)
 parser.add_argument("--bn", type=str2bool, default = True)
 parser.add_argument("--skp", type=str2bool, default = False)
 parser.add_argument("--res", type=str2bool, default = False)
-parser.add_argument("--lr", type=float, default = 1e-3)
+parser.add_argument("--lr", type=float, default = 1e-5)
 parser.add_argument("--step", type=int, default = 1000)
 parser.add_argument("--bz", type=int, default = 50)
 # parser.add_argument("--dataset", type=str, default = 'dense')
@@ -222,7 +223,7 @@ norm_err_list = []
 anomaly_err_list = []
 auc_list = []
 
-nb_steps = 5000
+# nb_steps = 5000
 best_val_err = np.inf
 # sess = tf.Session()
 with tf.Session() as sess:
@@ -268,7 +269,7 @@ with tf.Session() as sess:
 				best_val_err = val_err
 				np.savetxt(os.path.join(model_folder,'best_auc.txt'),auc_list)
 				hist_file = os.path.join(model_folder,'hist-{}.png'.format(model_name))
-				plot_hist(hist_file, tst_SA_err.flatten(), tst_SP_err.flatten())
+				plot_hist(hist_file, tst_img_errs[:int(len(tst_img_errs)/2)], tst_img_errs[int(len(tst_img_errs)/2):])
 				saver.save(sess, model_folder +'/best', global_step= iteration)
 				print_red('update best: {}'.format(model_name))
 				# save reconstructed images
