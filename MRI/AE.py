@@ -213,7 +213,7 @@ img_size = 256
 ## load dataset
 # X_SA_trn, X_SA_val, X_SA_tst, X_SP_tst = load_anomaly_data(dataset = dataset, train = train, valid = 400, test = 400)
 # noise = 10
-X_SA_trn, X_SA_val, X_SA_tst, X_SP_tst = load_MRI_true_data(docker = docker, train = train, val = 200, normal = 200, anomaly = 200, noise = noise)
+X_SA_trn, X_SA_val, X_SA_tst, X_SP_tst = load_MRI_true_Poisson(docker = docker, train = train, val = 200, normal = 200, anomaly = 200, noise = noise)
 save_recon_images_1(model_folder+'/data_example_{}.png'.format(noise), X_SA_tst, X_SP_tst, fig_size = [11,5])
 # 0-1 normalization
 X_SA_trn, X_SA_val, X_SA_tst, X_SP_tst = normalize_0_1(X_SA_trn), normalize_0_1(X_SA_val), normalize_0_1(X_SA_tst), normalize_0_1(X_SP_tst)
