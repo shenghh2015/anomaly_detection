@@ -72,6 +72,27 @@ def plot_LOSS(file_name, skip_points, train_loss_list, val_loss_list, norm_loss_
 	canvas = FigureCanvasAgg(fig)
 	canvas.print_figure(file_name, dpi=100)
 
+# visualize one group of examples
+def save_recon_images_1(img_file_name, imgs, recons, fig_size):
+	from matplotlib.backends.backend_agg import FigureCanvasAgg
+	from matplotlib.figure import Figure
+	imgs, recons = np.squeeze(imgs), np.squeeze(recons)
+	test_size = imgs.shape[0]
+	indxs = np.random.randint(0,int(test_size),3)
+# 	fig_size = (8,6)
+	fig_size = fig_size
+	fig = Figure(figsize=fig_size)
+	rows, cols = 2, 3
+	ax = fig.add_subplot(rows, cols, 1); cax=ax.imshow(imgs[indxs[0],:],cmap='gray'); fig.colorbar(cax); ax.set_title('Image-{}'.format(indxs[0])); ax.set_ylabel('f') 
+	ax = fig.add_subplot(rows, cols, 2); cax=ax.imshow(imgs[indxs[1],:],cmap='gray'); fig.colorbar(cax); ax.set_title('Image-{}'.format(indxs[1]));
+	ax = fig.add_subplot(rows, cols, 3); cax=ax.imshow(imgs[indxs[2],:],cmap='gray'); fig.colorbar(cax); ax.set_title('Image-{}'.format(indxs[2]));
+	ax = fig.add_subplot(rows, cols, 4); cax=ax.imshow(recons[indxs[0],:],cmap='gray'); fig.colorbar(cax); ax.set_ylabel('f_MP')
+	ax = fig.add_subplot(rows, cols, 5); cax=ax.imshow(recons[indxs[1],:],cmap='gray'); fig.colorbar(cax);
+	ax = fig.add_subplot(rows, cols, 6); cax=ax.imshow(recons[indxs[2],:],cmap='gray'); fig.colorbar(cax);
+	canvas = FigureCanvasAgg(fig)
+	canvas.print_figure(img_file_name, dpi=100)
+
+
 def plot_hist(file_name, x, y):
 	import matplotlib.pyplot as plt
 	from matplotlib.backends.backend_agg import FigureCanvasAgg
@@ -153,7 +174,7 @@ parser.add_argument("--bz", type=int, default = 50)
 parser.add_argument("--train", type=int, default = 65000)
 parser.add_argument("--val", type=int, default = 200)
 parser.add_argument("--test", type=int, default = 200)
-parser.add_argument("--noise_rate", type=float, default = 0.01)
+parser.add_argument("--noise", type=float, default = 0)
 
 args = parser.parse_args()
 print(args)
@@ -173,6 +194,7 @@ batch_size = args.bz
 train = args.train
 val = args.val
 test = args.test
+noise = args.noise
 
 os.environ["CUDA_VISIBLE_DEVICES"] = str(gpu)
 
@@ -190,7 +212,8 @@ generate_folder(model_folder)
 img_size = 256
 ## load dataset
 # X_SA_trn, X_SA_val, X_SA_tst, X_SP_tst = load_anomaly_data(dataset = dataset, train = train, valid = 400, test = 400)
-X_SA_trn, X_SA_val, X_SA_tst, X_SP_tst = load_MRI_true_data(docker = docker, train = train, val = 200, normal = 200, anomaly = 200)
+X_SA_trn, X_SA_val, X_SA_tst, X_SP_tst = load_MRI_true_data(docker = docker, train = train, val = 200, normal = 200, anomaly = 200, noise = noise)
+save_recon_images_1(model_folder+'data_example_{}'.format(noise), X_SA_tst, X_SP_tst, fig_size)
 # 0-1 normalization
 X_SA_trn, X_SA_val, X_SA_tst, X_SP_tst = normalize_0_1(X_SA_trn), normalize_0_1(X_SA_val), normalize_0_1(X_SA_tst), normalize_0_1(X_SP_tst)
 # padding into 128x128 pixels
