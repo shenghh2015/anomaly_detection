@@ -271,7 +271,7 @@ with tf.Session() as sess:
 			plot_AUC(auc_file, auc_list)
 			if best_val_err > val_err:
 				best_val_err = val_err
-				np.savetxt(os.path.join(model_folder,'best_auc.txt'),auc_list)
+				np.savetxt(os.path.join(model_folder,'best_auc.txt'),[test_auc, mean_auc])
 				hist_file = os.path.join(model_folder,'hist-{}.png'.format(model_name))
 				plot_hist(hist_file, tst_img_errs[:int(len(tst_img_errs)/2)], tst_img_errs[int(len(tst_img_errs)/2):])
 				saver.save(sess, model_folder +'/best', global_step= iteration)
