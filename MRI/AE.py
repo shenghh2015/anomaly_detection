@@ -76,7 +76,7 @@ def plot_hist(file_name, x, y):
 	import matplotlib.pyplot as plt
 	from matplotlib.backends.backend_agg import FigureCanvasAgg
 	from matplotlib.figure import Figure
-	kwargs = dict(alpha=0.6, bins=100, density= False, stacked=True)
+	kwargs = dict(alpha=0.6, bins=100, density= True, stacked=True)
 	fig_size = (8,6)
 	fig = Figure(figsize=fig_size)
 	file_name = file_name

@@ -1,0 +1,2 @@
+cd gen_artifacts
+python generate_artifact_images.py
