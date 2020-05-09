@@ -92,7 +92,6 @@ def save_recon_images_1(img_file_name, imgs, recons, fig_size):
 	canvas = FigureCanvasAgg(fig)
 	canvas.print_figure(img_file_name, dpi=100)
 
-
 def plot_hist(file_name, x, y):
 	import matplotlib.pyplot as plt
 	from matplotlib.backends.backend_agg import FigureCanvasAgg
@@ -109,6 +108,27 @@ def plot_hist(file_name, x, y):
 	title = os.path.basename(os.path.dirname(file_name))
 	ax.set_title(title)
 	ax.set_xlabel('Error')
+	ax.set_ylabel('Frequency')
+	ax.legend(['Norm', 'Anomaly'])
+	ax.set_xlim([np.min(np.concatenate([x,y])), np.max(np.concatenate([x,y]))])
+	canvas = FigureCanvasAgg(fig)
+	canvas.print_figure(file_name, dpi=100)
+
+def plot_hist_pixels(file_name, x, y):
+	import matplotlib.pyplot as plt
+	from matplotlib.backends.backend_agg import FigureCanvasAgg
+	from matplotlib.figure import Figure
+	kwargs = dict(alpha=0.6, bins=100, density= False, stacked=True)
+	fig_size = (8,6)
+	fig = Figure(figsize=fig_size)
+	file_name = file_name
+	ax = fig.add_subplot(111)
+	ax.hist(x, **kwargs, color='g', label='Norm')
+	ax.hist(y, **kwargs, color='r', label='Anomaly')
+	title = os.path.basename(os.path.dirname(file_name))
+	ax.set_title(title)
+# 	ax.set_xlabel('Error')
+	ax.set_xlabel('Mean of normalized pixel values')
 	ax.set_ylabel('Frequency')
 	ax.legend(['Norm', 'Anomaly'])
 	ax.set_xlim([np.min(np.concatenate([x,y])), np.max(np.concatenate([x,y]))])
@@ -233,10 +253,11 @@ X_SA_trn, X_SA_val, X_SA_tst, X_SP_tst, Xt = np.expand_dims(X_SA_trn, axis = 3),
 # create the graph
 scope = 'base'
 x = tf.placeholder("float", shape=[None, 256, 256, 1])
-if version == 1:
+if version == 1 and version ==2:
 	h1, h2, y = auto_encoder(x, nb_cnn = nb_cnn, bn = batch_norm, filters = filters, kernel_size = [kernel_size, kernel_size], scope_name = scope)
-elif version == 2:
-	h1, h2, y = auto_encoder(x, nb_cnn = nb_cnn, bn = batch_norm, filters = filters, kernel_size = [kernel_size, kernel_size], scope_name = scope)
+elif version == 3:
+	h1, h2, y = auto_encoder2(x, nb_cnn = nb_cnn, bn = batch_norm, filters = filters, kernel_size = [kernel_size, kernel_size], scope_name = scope)
+
 sqr_err = tf.square(y - x)
 cost = tf.reduce_mean(sqr_err)
 
@@ -310,7 +331,8 @@ with tf.Session() as sess:
 				np.savetxt(os.path.join(model_folder,'best_auc.txt'),[test_auc, mean_auc])
 				hist_file = os.path.join(model_folder,'hist-{}.png'.format(model_name))
 				plot_hist(hist_file, tst_img_errs[:int(len(tst_img_errs)/2)], tst_img_errs[int(len(tst_img_errs)/2):])
-				saver.save(sess, model_folder +'/best', global_step= iteration)
+				plot_hist_pixels(model_folder+'/hist_mean_pixel.png'.format(model_name), img_means[:int(len(img_means)/2)], img_means[int(len(img_means)/2):])
+				saver.save(sess, model_folder +'/best')
 				print_red('update best: {}'.format(model_name))
 				# save reconstructed images
 				img_file_name = os.path.join(model_folder,'recon-{}.png'.format(model_name))

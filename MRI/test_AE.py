@@ -176,8 +176,28 @@ def generate_folder(folder):
 	if not os.path.exists(folder):
 		os.system('mkdir -p {}'.format(folder))
 
-gpu = 1; docker = True; noise = 40; version = 2
-train, val, test = 65000, 200, 200
+# def get_parameters(model_name):
+# 	splits = model_name.split('-')
+# 	for i in range(len(splits)):
+# 		if splits[i] == 'cn':
+# 			nb_cnn = int(splits[i+1])
+# 		elif splits[i] == 'fr':
+# 			filters = int(splits[i+1])
+# 		elif splits[i] == 'ks':
+# 			kernel_size = int(splits[i+1])
+# 		elif splits[i] == 'tr':
+# 			train = int(splits[i+1][:2])* 1000
+# 		elif splits[i] == 'vl':
+# 			val = int(splits[i+1])
+# 		elif splits[i] == 'test':
+# 			test = int(splits[i+1])
+# 		elif splits[i] == 'n':
+# 			noise = float(splits[i+1])
+# 	return nb_cnn, filters, kernel_size, train, val, test, noise
+
+gpu = 1; docker = True
+# noise = 0; version = 2
+# train, val, test = 65000, 200, 200
 
 os.environ["CUDA_VISIBLE_DEVICES"] = str(gpu)
 
@@ -186,7 +206,30 @@ if docker:
 else:
 	output_folder = './data/MRI'
 
-model_name = 'AE2-MRI-cn-4-fr-32-ks-3-bn-True-skp-False-res-False-lr-0.0001-stps-200000-bz-50-tr-65k-vl-200-test-200-n-40.0'
+model_name = 'AE2-MRI-cn-4-fr-32-ks-3-bn-True-skp-False-res-False-lr-0.0001-stps-200000-bz-50-tr-65k-vl-200-test-200-n-0.0'
+#model_name = 'AE2-MRI-cn-4-fr-32-ks-3-bn-True-skp-False-res-False-lr-0.0001-stps-200000-bz-50-tr-65k-vl-200-test-200-n-40.0'
+#model_name = 'AE1-MRI-cn-4-fr-32-ks-5-bn-True-skp-False-res-False-lr-0.0001-stps-300000-bz-50-tr-65k-vl-200-test-200-n-50.0'
+splits = model_name.split('-')
+if len(splits[0])<=2:
+	version =1
+else:
+	version = int(splits[0][2])
+for i in range(len(splits)):
+	if splits[i] == 'cn':
+		nb_cnn = int(splits[i+1])
+	elif splits[i] == 'fr':
+		filters = int(splits[i+1])
+	elif splits[i] == 'ks':
+		kernel_size = int(splits[i+1])
+	elif splits[i] == 'tr':
+		train = int(splits[i+1][:2])* 1000
+	elif splits[i] == 'vl':
+		val = int(splits[i+1])
+	elif splits[i] == 'test':
+		test = int(splits[i+1])
+	elif splits[i] == 'n':
+		noise = float(splits[i+1])
+
 model_folder = os.path.join(output_folder, model_name)
 
 X_SA_trn, X_SA_val, X_SA_tst, X_SP_tst = load_MRI_true_data(docker = docker, train = train, val = val, normal = test, anomaly = test, noise = noise)
@@ -202,7 +245,9 @@ yt = np.concatenate([np.zeros((len(X_SA_tst),1)), np.ones((len(X_SP_tst),1))], a
 X_SA_trn, X_SA_val, X_SA_tst, X_SP_tst, Xt = np.expand_dims(X_SA_trn, axis = 3), np.expand_dims(X_SA_val, axis = 3), np.expand_dims(X_SA_tst, axis = 3),\
 		 np.expand_dims(X_SP_tst, axis = 3), np.expand_dims(Xt, axis = 3)
 
-nb_cnn = 4; batch_norm = True; filters = 32; kernel_size =3; 
+#nb_cnn = 4; 
+batch_norm = True 
+#filters = 32; kernel_size =3; 
 scope = 'base'
 x = tf.placeholder("float", shape=[None, 256, 256, 1])
 if version == 1:
@@ -226,7 +271,9 @@ for v in key_list:
 # max_val, min_val = 100, 45
 with tf.Session() as sess:
 	tf.global_variables_initializer().run(session=sess)
-	saver.restore(sess, model_folder+'/best-170600')
+# 	saver.restore(sess, model_folder+'/best-170600')  # noise 40
+# 	saver.restore(sess, model_folder+'/best-184100')  # noise 50
+	saver.restore(sess, model_folder+'/best-192600')  # noise 0
 	y_recon = y.eval(session = sess, feed_dict = {x:Xt})			
 	tst_pixel_errs = sqr_err.eval(session = sess, feed_dict = {x:Xt})
 	tst_pixel_errs1 = []
@@ -249,5 +296,7 @@ with tf.Session() as sess:
 	plot_hist(hist_file, tst_img_errs[:int(len(tst_img_errs)/2)], tst_img_errs[int(len(tst_img_errs)/2):])
 	plot_hist_pixels(model_folder+'/hist_mean_pixel.png'.format(model_name), tst_img_errs[:int(len(tst_img_errs)/2)], tst_img_errs[int(len(tst_img_errs)/2):])
 	print_red('update best: {}'.format(model_name))
+	saver.save(sess, model_folder +'/best')
 	img_file_name = os.path.join(model_folder,'recon_n-{}.png'.format(model_name))
 	save_recon_images(img_file_name, Xt, y_recon, tst_pixel_errs, fig_size = [11,5])
+	
