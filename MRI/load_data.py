@@ -40,6 +40,7 @@ def load_MRI_true_data(docker = False, train = 65000, val = 600, normal = 1000, 
 	else:
 		gauss1 = np.random.RandomState(0).normal(0, noise, img.shape)
 		img = img + gauss1
+		img_MP =  np.load(os.path.join(dataset_folder, 'axial_batch2_256x256_artifact_noisy.npy'))
 	X_trn, X_val, X_n, X_a = img[:train,:], img[65000:65000+val,:], img[65600:65600+normal,:], img_MP[65600:65600+anomaly,:]
 	return X_trn, X_val, X_n, X_a
 
