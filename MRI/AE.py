@@ -253,7 +253,7 @@ X_SA_trn, X_SA_val, X_SA_tst, X_SP_tst, Xt = np.expand_dims(X_SA_trn, axis = 3),
 # create the graph
 scope = 'base'
 x = tf.placeholder("float", shape=[None, 256, 256, 1])
-if version == 1 and version ==2:
+if version == 1 or version ==2:
 	h1, h2, y = auto_encoder(x, nb_cnn = nb_cnn, bn = batch_norm, filters = filters, kernel_size = [kernel_size, kernel_size], scope_name = scope)
 elif version == 3:
 	h1, h2, y = auto_encoder2(x, nb_cnn = nb_cnn, bn = batch_norm, filters = filters, kernel_size = [kernel_size, kernel_size], scope_name = scope)
