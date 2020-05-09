@@ -1,7 +1,6 @@
 # Author: Sayantan Bhadra
 # Date: 05/03/2020
 # Script for generating noiseless single-coil MR measurements and corresponding pseudoinverse reconstructions with artifacts
-# Modified by Shenghua He for generating a large amount of data
 import numpy as np
 import numpy.fft as fft
 import matplotlib
@@ -10,37 +9,45 @@ import matplotlib.pyplot as plt
 docker = True
 # Load the array of images and select a single slice as ground truth f
 dim = 256 # Image dimensions: dimxdim
-mean = [0, 0]
-cov = [[sigma**2, 0],[0, sigma**2]]
 dataset_folder = '/data/datasets/MRI'
 images = np.load(dataset_folder + '/axial_batch2_256x256.npy')
 # Load the undersampling mask
 mask = np.fromfile('./mask_4_fold_cartesian.dat',np.int32)
 mask = mask.reshape(dim,dim)
 mask = fft.ifftshift(mask) # Since FFT is not centered we can shift the mask itself
-# plt.figure(1); plt.imshow(mask,cmap='gray'); plt.title('Undersampling mask')
-# plt.show()
+plt.clf()
+plt.figure(1); plt.imshow(mask,cmap='gray'); plt.title('Undersampling mask')
+plt.show()
+plt.savefig('/data/datasets/MRI/mask_image.png')
 
+sigma = 100
+mean = [0, 0]
+# cov = [[sigma**2, 0],[0, sigma**2]]
 # Generate the artifact images
-# nb_data = 1000
-f_MP_list = []
-for i in range(len(images)):
-	f = images[i,:,:]
-	# Perform forward operation (FFT followed by undersampling)
-	# The measurement data 'g' in MRI is called the 'k-space'
-	g = mask * fft.fft2(f)
-	# The MP pseudoinverse is the IFFT (f_MP)
-	# Take the real component as FFT and IFFT will introduce imaginary components
-	z = np.squeeze(np.random.multivariate_normal(mean, cov, (dim, dim)).view(np.complex128))
-	g = g + z
-	f_MP = fft.ifft2(g); f_MP = np.real(f_MP)
-	f_MP_list.append(f_MP)
+f = images[200,:,:]
+# Perform forward operation (FFT followed by undersampling)
+# The measurement data 'g' in MRI is called the 'k-space'
+g = mask * fft.fft2(f)
+# The MP pseudoinverse is the IFFT (f_MP)
+# Take the real component as FFT and IFFT will introduce imaginary components
+cov = [[np.real(np.max(g)), 0],[0, np.real(np.max(g))]]
+z = np.squeeze(np.random.multivariate_normal(mean, cov, (dim, dim)).view(np.complex128))
+f_MP = fft.ifft2(g); f_MP = np.real(f_MP)
+g1 = g + z
+f_MP1 = fft.ifft2(g1); f_MP1 = np.real(f_MP1)
 
-f_MP_arr = np.array(f_MP_list, dtype = np.float32)
+plt.figure(2); plt.clf()
+plt.subplot(321);plt.imshow(f,cmap='gray');plt.colorbar();plt.title('Ground truth')
+plt.subplot(322);plt.imshow(mask,cmap='gray');plt.colorbar();plt.title('Mask')
+plt.subplot(323);plt.imshow(np.real(g),cmap='gray');plt.colorbar();plt.title('Noiseless')
+plt.subplot(324);plt.imshow(f_MP,cmap='gray');plt.colorbar();plt.title('Noiseless Recon')
+plt.subplot(325);plt.imshow(np.real(g1),cmap='gray');plt.colorbar();plt.title('Noisy')
+plt.subplot(326);plt.imshow(f_MP1,cmap='gray');plt.colorbar();plt.title('Noisy Recon')
+plt.tight_layout()
+plt.savefig('/data/datasets/MRI/artifact_image.png')
+
 
 # Save the data
-np.save(dataset_folder + '/axial_batch2_256x256_artifact_noise_{}.npy'.format(sigma), f_MP_arr)
-# plt.figure(2)
 
 ## plot figure to show noise
 plt.clf()

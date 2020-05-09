@@ -39,7 +39,7 @@ def plot_hist(file_name, x, y):
 	import matplotlib.pyplot as plt
 	from matplotlib.backends.backend_agg import FigureCanvasAgg
 	from matplotlib.figure import Figure
-	kwargs = dict(alpha=0.6, bins=100, density= True, stacked=True)
+	kwargs = dict(alpha=0.6, bins=100, density= False, stacked=True)
 	fig_size = (8,6)
 	fig = Figure(figsize=fig_size)
 	file_name = file_name
@@ -51,12 +51,13 @@ def plot_hist(file_name, x, y):
 	title = os.path.basename(os.path.dirname(file_name))
 	ax.set_title(title)
 	ax.set_xlabel('Error')
-	ax.set_ylabel('Probalbity')
+	ax.set_ylabel('Frequency')
 	ax.legend(['Norm', 'Anomaly'])
 	ax.set_xlim([np.min(np.concatenate([x,y])), np.max(np.concatenate([x,y]))])
 	canvas = FigureCanvasAgg(fig)
 	canvas.print_figure(file_name, dpi=100)
 
+# Poisson noise
 _, _, X_SA_tst, X_SP_tst = load_MRI_true_data(docker = True, train = 1000, val = 200, normal = 200, anomaly = 200, noise = 0)
 noise = 0
 pois1 = np.random.RandomState(0).poisson(np.abs(X_SA_tst)).astype(float)
@@ -75,3 +76,24 @@ print('The AUC based on pixel mean: {0:.4f}'.format(mean_auc))
 x = np.squeeze(np.apply_over_axes(np.mean, X_SA_pois, axes = [1,2]))
 y = np.squeeze(np.apply_over_axes(np.mean, X_SP_pois, axes = [1,2]))
 plot_hist('/data/datasets/MRI/poisson_noisy_hist_{}.png'.format(noise), x, y)
+
+# Gaussian noise
+# mu1, mu2 = 0.5*(np.max(X_SA_tst)-np.min(X_SA_tst)), 0.5*(np.max(X_SP_tst)-np.min(X_SP_tst))
+noise = 50
+gauss1 = np.random.RandomState(0).normal(0, 50, X_SA_tst.shape)
+gauss2 = np.random.RandomState(1).normal(0, 50, X_SP_tst.shape)
+X_SA_gauss = X_SA_tst + gauss1
+X_SP_gauss = X_SP_tst + gauss2
+X_SA_gauss, X_SP_gauss = normalize_0_1(X_SA_gauss), normalize_0_1(X_SP_gauss)
+Xt = np.concatenate([X_SA_gauss, X_SP_gauss], axis = 0)
+yt = np.concatenate([np.zeros((len(X_SA_gauss),1)), np.ones((len(X_SP_gauss),1))], axis = 0).flatten()
+# Xt_n = Xt + pois
+img_means = np.squeeze(np.apply_over_axes(np.mean, Xt, axes = [1,2]))
+mean_auc = roc_auc_score(yt, img_means)
+save_recon_images_1('/data/datasets/MRI/Gaussian_noisy_image_{}.png'.format(noise), X_SA_gauss, X_SP_gauss, [11, 5])
+print('The AUC based on pixel mean: {0:.4f}'.format(mean_auc))
+x = np.squeeze(np.apply_over_axes(np.mean, X_SA_gauss, axes = [1,2]))
+y = np.squeeze(np.apply_over_axes(np.mean, X_SP_gauss, axes = [1,2]))
+plot_hist('/data/datasets/MRI/Gaussian_noisy_hist_{}.png'.format(noise), x, y)
+
+

@@ -64,3 +64,29 @@ def auto_encoder(x, nb_cnn = 4, bn = False, filters = 32, kernel_size = [5,5], s
 					kernel_initializer= 'truncated_normal', kernel_regularizer=l2_regularizer)
 		y = tf.nn.relu(y)
 	return h1, h2, y
+
+## auto-encoder version 2
+def conv_block2(x, nb_cnn = 4, bn = False, filters = 32, kernel_size = [5,5], scope_name = 'encoder'):
+	with tf.variable_scope(scope_name):
+		h = _conv_bn_lrelu_pool(x, filters = filters, kernel_size = kernel_size, pool = True, bn = bn)
+		for i in range(1, nb_cnn):
+			h = _conv_bn_lrelu_pool(h, filters = filters, kernel_size = kernel_size, pool = True, bn = bn)
+	return h
+
+def up_conv_block2(x, nb_cnn = 4, bn = False, filters = 32, kernel_size = [5,5], scope_name = 'decoder'):
+	with tf.variable_scope(scope_name):
+		h = _up_conv_bn_lrelu(x, filters = filters, kernel_size = kernel_size, up = True, bn = bn)
+		for i in range(1, nb_cnn):
+			h = _up_conv_bn_lrelu(h, filters = filters, kernel_size = kernel_size, up = True, bn = bn)
+	return h
+
+def auto_encoder2(x, nb_cnn = 4, bn = False, filters = 32, kernel_size = [5,5], scope_name = 'base', reuse = False):
+	with tf.variable_scope(scope_name, reuse = reuse):
+		h1 = conv_block2(x, nb_cnn = nb_cnn, bn = bn, filters = filters, kernel_size = kernel_size, scope_name = 'encoder')
+		h2 = up_conv_block2(h1, nb_cnn = nb_cnn, bn = bn, filters = filters, kernel_size = kernel_size, scope_name = 'decoder')
+		if bn:
+			h2 = tf.layers.batch_normalization(h2, training = True)
+		y = tf.layers.conv2d(h2, filters = 1, kernel_size = kernel_size, strides=(1, 1), padding='same',
+					kernel_initializer= 'truncated_normal', kernel_regularizer=l2_regularizer)
+		y = tf.nn.relu(y)
+	return h1, h2, y

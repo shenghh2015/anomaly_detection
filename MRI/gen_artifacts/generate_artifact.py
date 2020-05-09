@@ -20,21 +20,18 @@ mask = fft.ifftshift(mask) # Since FFT is not centered we can shift the mask its
 
 # Generate the artifact images
 # nb_data = 1000
-f_MP_list = []
-for i in range(len(images)):
-	f = images[i,:,:]
-	# Perform forward operation (FFT followed by undersampling)
-	# The measurement data 'g' in MRI is called the 'k-space'
-	g = mask * fft.fft2(f)
-	# The MP pseudoinverse is the IFFT (f_MP)
-	# Take the real component as FFT and IFFT will introduce imaginary components
-	f_MP = fft.ifft2(g); f_MP = np.real(f_MP)
-	f_MP_list.append(f_MP)
+f = images[i,:,:]
+# Perform forward operation (FFT followed by undersampling)
+# The measurement data 'g' in MRI is called the 'k-space'
+g = mask * fft.fft2(f)
+# The MP pseudoinverse is the IFFT (f_MP)
+# Take the real component as FFT and IFFT will introduce imaginary components
+f_MP = fft.ifft2(g); f_MP = np.real(f_MP)
 
-f_MP_arr = np.array(f_MP_list, dtype = np.float32)
+# f_MP_arr = np.array(f_MP_list, dtype = np.float32)
 
 # Save the data
-np.save('./axial_batch2_256x256_artifact.npy', f_MP_arr)
+# np.save('./axial_batch2_256x256_artifact.npy', f_MP_arr)
 # plt.figure(2)
 # plt.subplot(121);plt.imshow(f,cmap='gray');plt.colorbar();plt.title('Ground truth')
 # plt.subplot(122);plt.imshow(f_MP,cmap='gray');plt.colorbar();plt.title('Reconstructed pseudoinverse image with artifacts')

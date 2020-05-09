@@ -66,7 +66,7 @@ def plot_LOSS(file_name, skip_points, train_loss_list, val_loss_list, norm_loss_
 	title = os.path.basename(os.path.dirname(file_name))
 	ax.set_title(title)
 	ax.set_xlabel('Iterations/100')
-	ax.set_ylabel('log(mse)')
+	ax.set_ylabel('MSE')
 	ax.legend(['Train','Valid','T-norm', 'T-Abnorm'])
 	ax.set_xlim([0,len(train_loss_list)])
 	canvas = FigureCanvasAgg(fig)
@@ -97,7 +97,7 @@ def plot_hist(file_name, x, y):
 	import matplotlib.pyplot as plt
 	from matplotlib.backends.backend_agg import FigureCanvasAgg
 	from matplotlib.figure import Figure
-	kwargs = dict(alpha=0.6, bins=100, density= True, stacked=True)
+	kwargs = dict(alpha=0.6, bins=100, density= False, stacked=True)
 	fig_size = (8,6)
 	fig = Figure(figsize=fig_size)
 	file_name = file_name
@@ -109,7 +109,7 @@ def plot_hist(file_name, x, y):
 	title = os.path.basename(os.path.dirname(file_name))
 	ax.set_title(title)
 	ax.set_xlabel('Error')
-	ax.set_ylabel('Probalbity')
+	ax.set_ylabel('Frequency')
 	ax.legend(['Norm', 'Anomaly'])
 	ax.set_xlim([np.min(np.concatenate([x,y])), np.max(np.concatenate([x,y]))])
 	canvas = FigureCanvasAgg(fig)
@@ -175,6 +175,7 @@ parser.add_argument("--train", type=int, default = 65000)
 parser.add_argument("--val", type=int, default = 200)
 parser.add_argument("--test", type=int, default = 200)
 parser.add_argument("--noise", type=float, default = 0)
+parser.add_argument("--version", type=int, default = 1)
 
 args = parser.parse_args()
 print(args)
@@ -195,6 +196,7 @@ train = args.train
 val = args.val
 test = args.test
 noise = args.noise
+version = args.version
 
 os.environ["CUDA_VISIBLE_DEVICES"] = str(gpu)
 
@@ -204,7 +206,7 @@ else:
 	output_folder = './data/MRI'
 
 ## model folder
-model_name = 'AE-{}-cn-{}-fr-{}-ks-{}-bn-{}-skp-{}-res-{}-lr-{}-stps-{}-bz-{}-tr-{}k-vl-{}-test-{}-n-{}'.format(os.path.basename(output_folder), nb_cnn, filters, kernel_size, batch_norm, skip, residual, lr, nb_steps, batch_size, int(train/1000), val, test,noise)
+model_name = 'AE{}-{}-cn-{}-fr-{}-ks-{}-bn-{}-skp-{}-res-{}-lr-{}-stps-{}-bz-{}-tr-{}k-vl-{}-test-{}-n-{}'.format(version, os.path.basename(output_folder), nb_cnn, filters, kernel_size, batch_norm, skip, residual, lr, nb_steps, batch_size, int(train/1000), val, test,noise)
 model_folder = os.path.join(output_folder, model_name)
 generate_folder(model_folder)
 
@@ -213,8 +215,8 @@ img_size = 256
 ## load dataset
 # X_SA_trn, X_SA_val, X_SA_tst, X_SP_tst = load_anomaly_data(dataset = dataset, train = train, valid = 400, test = 400)
 # noise = 10
-X_SA_trn, X_SA_val, X_SA_tst, X_SP_tst = load_MRI_true_Poisson(docker = docker, train = train, val = 200, normal = 200, anomaly = 200, noise = noise)
-save_recon_images_1(model_folder+'/data_example_{}.png'.format(noise), X_SA_tst, X_SP_tst, fig_size = [11,5])
+X_SA_trn, X_SA_val, X_SA_tst, X_SP_tst = load_MRI_true_data(docker = docker, train = train, val = val, normal = test, anomaly = test, noise = noise)
+# save_recon_images_1(model_folder+'/data_example_{}.png'.format(noise), X_SA_tst, X_SP_tst, fig_size = [11,5])
 # 0-1 normalization
 X_SA_trn, X_SA_val, X_SA_tst, X_SP_tst = normalize_0_1(X_SA_trn), normalize_0_1(X_SA_val), normalize_0_1(X_SA_tst), normalize_0_1(X_SP_tst)
 # padding into 128x128 pixels
@@ -231,7 +233,10 @@ X_SA_trn, X_SA_val, X_SA_tst, X_SP_tst, Xt = np.expand_dims(X_SA_trn, axis = 3),
 # create the graph
 scope = 'base'
 x = tf.placeholder("float", shape=[None, 256, 256, 1])
-h1, h2, y = auto_encoder(x, nb_cnn = nb_cnn, bn = batch_norm, filters = filters, kernel_size = [kernel_size, kernel_size], scope_name = scope)
+if version == 1:
+	h1, h2, y = auto_encoder(x, nb_cnn = nb_cnn, bn = batch_norm, filters = filters, kernel_size = [kernel_size, kernel_size], scope_name = scope)
+elif version == 2:
+	h1, h2, y = auto_encoder(x, nb_cnn = nb_cnn, bn = batch_norm, filters = filters, kernel_size = [kernel_size, kernel_size], scope_name = scope)
 sqr_err = tf.square(y - x)
 cost = tf.reduce_mean(sqr_err)
 
@@ -242,6 +247,10 @@ key_direct = {}
 for key, var in zip(key_list, vars_list):
 	key_direct[key] = var
 saver = tf.train.Saver(key_direct, max_to_keep=nb_steps)
+
+# print out trainable parameters
+for v in key_list:
+	print_green(v)
 
 trn_step = tf.train.AdamOptimizer(lr).minimize(cost, var_list= vars_list)
 
