@@ -11,86 +11,65 @@ docker = True
 dim = 256 # Image dimensions: dimxdim
 dataset_folder = '/data/datasets/MRI'
 images = np.load(dataset_folder + '/axial_batch2_256x256.npy')
-# Load the undersampling mask
-mask = np.fromfile('./mask_4_fold_cartesian.dat',np.int32)
-mask = mask.reshape(dim,dim)
-mask = fft.ifftshift(mask) # Since FFT is not centered we can shift the mask itself
-plt.clf()
-plt.figure(1); plt.imshow(mask,cmap='gray'); plt.title('Undersampling mask')
-plt.show()
-plt.savefig('/data/datasets/MRI/mask_image.png')
+f_MP_list = []
+for i in range(images.shape[0]):
+	# Load the undersampling mask
+	mask = np.fromfile('./mask_4_fold_cartesian.dat',np.int32)
+	mask = mask.reshape(dim,dim)
+	mask = fft.ifftshift(mask) # Since FFT is not centered we can shift the mask itself
+	plt.clf()
+	plt.figure(1); plt.imshow(mask,cmap='gray'); plt.title('Undersampling mask')
+	plt.show()
+	plt.savefig('/data/datasets/MRI/mask_image.png')
 
-sigma = 100
-mean = [0, 0]
-# cov = [[sigma**2, 0],[0, sigma**2]]
-# Generate the artifact images
-f = images[200,:,:]
-# Perform forward operation (FFT followed by undersampling)
-# The measurement data 'g' in MRI is called the 'k-space'
-g = mask * fft.fft2(f)
-# The MP pseudoinverse is the IFFT (f_MP)
-# Take the real component as FFT and IFFT will introduce imaginary components
-cov = [[np.real(np.max(g))*100, 0],[0, np.real(np.max(g))*100]]
-z = np.squeeze(np.random.multivariate_normal(mean, cov, (dim, dim)).view(np.complex128))
-f_MP = fft.ifft2(g); f_MP = np.real(f_MP)
-g1 = g + z
-f_MP1 = fft.ifft2(g1); f_MP1 = np.real(f_MP1)
+	# Generate the artifact images
+	f = images[200,:,:]
+	# Perform forward operation (FFT followed by undersampling)
+	# The measurement data 'g' in MRI is called the 'k-space'
+	g = mask * fft.fft2(f)
+	# The MP pseudoinverse is the IFFT (f_MP)
+	# Take the real component as FFT and IFFT will introduce imaginary components
+	mean = [0, 0]
+	cov = [[np.real(np.max(g))*10, 0],[0, np.real(np.max(g))*10]]
+	z = np.squeeze(np.random.multivariate_normal(mean, cov, (dim, dim)).view(np.complex128))
+# 	f_MP = fft.ifft2(g); f_MP = np.real(f_MP)
+	g1 = g + z
+	f_MP1 = fft.ifft2(g1); f_MP1 = np.real(f_MP1)
+	f_MP_list.append(f_MP1)
 
-plt.figure(2); plt.clf()
-plt.subplot(321);plt.imshow(f,cmap='gray');plt.colorbar();plt.title('Ground truth')
-plt.subplot(322);plt.imshow(mask,cmap='gray');plt.colorbar();plt.title('Mask')
-plt.subplot(323);plt.imshow(np.real(g),cmap='gray');plt.colorbar();plt.title('Noiseless')
-plt.subplot(324);plt.imshow(f_MP,cmap='gray');plt.colorbar();plt.title('Noiseless Recon')
-plt.subplot(325);plt.imshow(np.real(g1),cmap='gray');plt.colorbar();plt.title('Noisy')
-plt.subplot(326);plt.imshow(f_MP1,cmap='gray');plt.colorbar();plt.title('Noisy Recon')
-plt.tight_layout()
-plt.savefig('/data/datasets/MRI/artifact_image.png')
+# plt.close('all'); plt.figure(2); plt.clf()
+# plt.subplot(321);plt.imshow(f,cmap='gray');plt.colorbar();plt.title('Ground truth')
+# plt.subplot(322);plt.imshow(mask,cmap='gray');plt.colorbar();plt.title('Mask')
+# plt.subplot(323);plt.imshow(np.real(g),cmap='gray');plt.colorbar();plt.title('Noiseless')
+# plt.subplot(324);plt.imshow(f_MP,cmap='gray');plt.colorbar();plt.title('Noiseless Recon')
+# plt.subplot(325);plt.imshow(np.real(g1),cmap='gray');plt.colorbar();plt.title('Noisy')
+# plt.subplot(326);plt.imshow(f_MP1,cmap='gray');plt.colorbar();plt.title('Noisy Recon')
+# plt.tight_layout()
+# plt.savefig('/data/datasets/MRI/artifact_image.png')
 
+# save data
+f_MP_arr = np.array(f_MP_list, dtype = np.float32)
+np.save(dataset_folder + '/axial_batch2_256x256_artifact_noisy.npy', f_MP_arr)
 
-# Save the data
+# visualize one group of examples
+def save_recon_images(img_file_name, imgs, recons, fig_size):
+	from matplotlib.backends.backend_agg import FigureCanvasAgg
+	from matplotlib.figure import Figure
+	imgs, recons = np.squeeze(imgs), np.squeeze(recons)
+	test_size = imgs.shape[0]
+	indxs = np.random.randint(0,int(test_size),3)
+# 	fig_size = (8,6)
+	fig_size = fig_size
+	fig = Figure(figsize=fig_size)
+	rows, cols = 2, 3
+	ax = fig.add_subplot(rows, cols, 1); cax=ax.imshow(imgs[indxs[0],:],cmap='gray'); fig.colorbar(cax); ax.set_title('Image-{}'.format(indxs[0])); ax.set_ylabel('f') 
+	ax = fig.add_subplot(rows, cols, 2); cax=ax.imshow(imgs[indxs[1],:],cmap='gray'); fig.colorbar(cax); ax.set_title('Image-{}'.format(indxs[1]));
+	ax = fig.add_subplot(rows, cols, 3); cax=ax.imshow(imgs[indxs[2],:],cmap='gray'); fig.colorbar(cax); ax.set_title('Image-{}'.format(indxs[2]));
+	ax = fig.add_subplot(rows, cols, 4); cax=ax.imshow(recons[indxs[0],:],cmap='gray'); fig.colorbar(cax); ax.set_ylabel('f_MP')
+	ax = fig.add_subplot(rows, cols, 5); cax=ax.imshow(recons[indxs[1],:],cmap='gray'); fig.colorbar(cax);
+	ax = fig.add_subplot(rows, cols, 6); cax=ax.imshow(recons[indxs[2],:],cmap='gray'); fig.colorbar(cax);
+	canvas = FigureCanvasAgg(fig)
+	canvas.print_figure(img_file_name, dpi=100)
 
-## plot figure to show noise
-plt.clf()
-fig = plt.figure(2)
-f = images[500,:,:]
-g = mask * fft.fft2(f)
-max_g = np.max(np.real(g))
-s1, s2, s3, s4, s5 = 0.01, 0.05, 0.10, 0.15, 0.5
-cov1, cov2, cov3, cov4, cov5 = [[s1*max_g,0],[0, s1*max_g]], [[s2*max_g,0],[0, s2*max_g]],\
-	[[s3*max_g,0],[0, s3*max_g]], [[s4*max_g,0],[0, s4*max_g]], [[s5*max_g,0],[0, s5*max_g]]
-z1 = np.squeeze(np.random.multivariate_normal(mean, cov1, (dim, dim)).view(np.complex128))
-z2 = np.squeeze(np.random.multivariate_normal(mean, cov2, (dim, dim)).view(np.complex128))
-z3 = np.squeeze(np.random.multivariate_normal(mean, cov3, (dim, dim)).view(np.complex128))
-z4 = np.squeeze(np.random.multivariate_normal(mean, cov4, (dim, dim)).view(np.complex128))
-z5 = np.squeeze(np.random.multivariate_normal(mean, cov4, (dim, dim)).view(np.complex128))
-g1, g2, g3, g4, g5 = g + z1, g + z2, g + z3, g + z4, g + z5
-f_MP = fft.ifft2(g); f_MP = np.real(f_MP)
-f_MP1 = fft.ifft2(g1); f_MP1 = np.real(f_MP1)
-f_MP2 = fft.ifft2(g2); f_MP2 = np.real(f_MP2)
-f_MP3 = fft.ifft2(g3); f_MP3 = np.real(f_MP3)
-f_MP4 = fft.ifft2(g4); f_MP4 = np.real(f_MP4)
-f_MP5 = fft.ifft2(g5); f_MP5 = np.real(f_MP5)
-# plt.subplot(121);plt.imshow(f,cmap='gray');plt.colorbar();plt.title('Ground truth')
-# plt.subplot(122);plt.imshow(f_MP,cmap='gray');plt.colorbar();plt.title('Reconstructed pseudoinverse image with artifacts')
-plt.clf()
-ax = fig.add_subplot(2,3,1); cax = ax.imshow(f, cmap ='gray'); fig.colorbar(cax); ax.set_title('Ground truth')
-ax = fig.add_subplot(2,3,2); cax = ax.imshow(f_MP1, cmap ='gray'); fig.colorbar(cax); ax.set_title('MP-noise:1')
-ax = fig.add_subplot(2,3,3); cax = ax.imshow(f_MP2, cmap ='gray'); fig.colorbar(cax); ax.set_title('MP-noise:2')
-ax = fig.add_subplot(2,3,4); cax = ax.imshow(f_MP3, cmap ='gray'); fig.colorbar(cax); ax.set_title('MP-noise:3')
-ax = fig.add_subplot(2,3,5); cax = ax.imshow(f_MP4, cmap ='gray'); fig.colorbar(cax); ax.set_title('MP-noise:4')
-ax = fig.add_subplot(2,3,6); cax = ax.imshow(f_MP5, cmap ='gray'); fig.colorbar(cax); ax.set_title('MP-noise:5')
-plt.tight_layout()
-fig.savefig(dataset_folder + '/noisy_image.png')
-ax = fig.add_subplot(2,3,1); cax = ax.imshow(f, cmap ='gray'); fig.colorbar(cax); ax.set_title('Ground truth')
-ax = fig.add_subplot(2,3,2); cax = ax.imshow(images[100,:], cmap ='gray'); fig.colorbar(cax); ax.set_title('MP-noise:1')
-ax = fig.add_subplot(2,3,3); cax = ax.imshow(images[200,:], cmap ='gray'); fig.colorbar(cax); ax.set_title('MP-noise:2')
-ax = fig.add_subplot(2,3,4); cax = ax.imshow(images[300,:], cmap ='gray'); fig.colorbar(cax); ax.set_title('MP-noise:3')
-ax = fig.add_subplot(2,3,5); cax = ax.imshow(images[400,:], cmap ='gray'); fig.colorbar(cax); ax.set_title('MP-noise:4')
-ax = fig.add_subplot(2,3,6); cax = ax.imshow(images[500,:], cmap ='gray'); fig.colorbar(cax); ax.set_title('MP-noise:5')
-plt.tight_layout()
-fig.savefig(dataset_folder + '/artifact_image.png')
-# for i in range(20):
-# 	idx = np.random.randint(0,999)
-# 	plt.imshow(f_MP_arr[idx,:], cmap = 'gray')
-# 	plt.pause(1)
-# plt.show()
+save_recon_images(dataset_folder+'/artifact_noisy_examples.png', images, f_MP_arr, fig_size = [11, 5])
+
