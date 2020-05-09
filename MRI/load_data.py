@@ -15,17 +15,31 @@ from sklearn.metrics import roc_auc_score
 # 	
 # 	return X_trn, X_val, X_n, X_a
 
+# def load_MRI_true_data(docker = False, train = 65000, val = 600, normal = 1000, anomaly = 1000, noise = 0):
+# 	if docker:
+# 		dataset_folder = '/data/datasets/MRI'
+# 	else:
+# 		dataset_folder = '/shared/planck/CommonData/MRI/anomaly_detection_data'
+# 	img = np.load(os.path.join(dataset_folder, 'axial_batch2_256x256.npy'))
+# 	img_MP =  np.load(os.path.join(dataset_folder, 'axial_batch2_256x256_artifact.npy'))
+# 	if noise > 0:
+# 		gauss1 = np.random.RandomState(0).normal(0, noise, img.shape)
+# 		gauss2 = np.random.RandomState(1).normal(0, noise, img_MP.shape)
+# 		img, img_MP = img + gauss1, img_MP + gauss2
+# 	X_trn, X_val, X_n, X_a = img[:train,:], img[65000:65000+val,:], img[65600:65600+normal,:], img_MP[65600:65600+anomaly,:]
+# 	return X_trn, X_val, X_n, X_a
+
 def load_MRI_true_data(docker = False, train = 65000, val = 600, normal = 1000, anomaly = 1000, noise = 0):
 	if docker:
 		dataset_folder = '/data/datasets/MRI'
 	else:
 		dataset_folder = '/shared/planck/CommonData/MRI/anomaly_detection_data'
 	img = np.load(os.path.join(dataset_folder, 'axial_batch2_256x256.npy'))
-	img_MP =  np.load(os.path.join(dataset_folder, 'axial_batch2_256x256_artifact.npy'))
-	if noise > 0:
+	if noise == 0:
+		img_MP =  np.load(os.path.join(dataset_folder, 'axial_batch2_256x256_artifact.npy'))
+	else:
 		gauss1 = np.random.RandomState(0).normal(0, noise, img.shape)
-		gauss2 = np.random.RandomState(1).normal(0, noise, img_MP.shape)
-		img, img_MP = img + gauss1, img_MP + gauss2
+		img = img + gauss1
 	X_trn, X_val, X_n, X_a = img[:train,:], img[65000:65000+val,:], img[65600:65600+normal,:], img_MP[65600:65600+anomaly,:]
 	return X_trn, X_val, X_n, X_a
 
