@@ -35,7 +35,7 @@ def save_recon_images_1(img_file_name, imgs, recons, fig_size):
 	canvas = FigureCanvasAgg(fig)
 	canvas.print_figure(img_file_name, dpi=100)
 
-def plot_hist(file_name, x, y):
+def plot_hist_pixels(file_name, x, y):
 	import matplotlib.pyplot as plt
 	from matplotlib.backends.backend_agg import FigureCanvasAgg
 	from matplotlib.figure import Figure
@@ -44,13 +44,11 @@ def plot_hist(file_name, x, y):
 	fig = Figure(figsize=fig_size)
 	file_name = file_name
 	ax = fig.add_subplot(111)
-# 	x = np.exp(-x)
-# 	y = np.exp(-y)
 	ax.hist(x, **kwargs, color='g', label='Norm')
 	ax.hist(y, **kwargs, color='r', label='Anomaly')
 	title = os.path.basename(os.path.dirname(file_name))
 	ax.set_title(title)
-	ax.set_xlabel('Error')
+	ax.set_xlabel('Mean of normalized pixel values')
 	ax.set_ylabel('Frequency')
 	ax.legend(['Norm', 'Anomaly'])
 	ax.set_xlim([np.min(np.concatenate([x,y])), np.max(np.concatenate([x,y]))])
@@ -79,7 +77,7 @@ plot_hist('/data/datasets/MRI/poisson_noisy_hist_{}.png'.format(noise), x, y)
 
 # Gaussian noise
 # mu1, mu2 = 0.5*(np.max(X_SA_tst)-np.min(X_SA_tst)), 0.5*(np.max(X_SP_tst)-np.min(X_SP_tst))
-noise = 50
+noise = 0
 gauss1 = np.random.RandomState(0).normal(0, 50, X_SA_tst.shape)
 gauss2 = np.random.RandomState(1).normal(0, 50, X_SP_tst.shape)
 X_SA_gauss = X_SA_tst + gauss1
@@ -99,10 +97,12 @@ plot_hist('/data/datasets/MRI/Gaussian_noisy_hist_{}.png'.format(noise), x, y)
 ## load noisy images
 dataset_folder = '/data/datasets/MRI'
 img = np.load(os.path.join(dataset_folder, 'axial_batch2_256x256.npy'))
-img_MP =  np.load(os.path.join(dataset_folder, 'axial_batch2_256x256_artifact_noisy.npy'))
+# img_MP =  np.load(os.path.join(dataset_folder, 'axial_batch2_256x256_artifact_noisy.npy'))
+img_MP =  np.load(os.path.join(dataset_folder, 'axial_batch2_256x256_artifact.npy'))
 train, val, normal, anomaly = 65000, 200, 200, 200
-X_SA_trn, X_SA_val, X_SA_tst, X_SP_tst = img[:train,:], img[65000:65000+val,:], img[65600:65600+normal,:], img_MP[65600:65600+anomaly,:]
-noise = 40
+anomaly_offset = 65600
+X_SA_trn, X_SA_val, X_SA_tst, X_SP_tst = img[:train,:], img[65000:65000+val,:], img[65600:65600+normal,:], img_MP[anomaly_offset:anomaly_offset+anomaly,:]
+noise = 0
 gauss1 = np.random.RandomState(0).normal(0, noise, X_SA_tst.shape)
 X_SA_gauss = X_SA_tst + gauss1
 X_SP_gauss = X_SP_tst
@@ -112,10 +112,10 @@ yt = np.concatenate([np.zeros((len(X_SA_gauss),1)), np.ones((len(X_SP_gauss),1))
 # Xt_n = Xt + pois
 img_means = np.squeeze(np.apply_over_axes(np.mean, Xt, axes = [1,2]))
 mean_auc = roc_auc_score(yt, img_means)
-save_recon_images_1('/data/datasets/MRI/Gaussian_noisy_recon_image_{}.png'.format(noise), X_SA_gauss, X_SP_gauss, [11, 5])
+# save_recon_images_1('/data/datasets/MRI/Gaussian_noisy_recon_image_{}.png'.format(noise), X_SA_gauss, X_SP_gauss, [11, 5])
 print('The AUC based on pixel mean: {0:.4f}'.format(mean_auc))
 x = np.squeeze(np.apply_over_axes(np.mean, X_SA_gauss, axes = [1,2]))
 y = np.squeeze(np.apply_over_axes(np.mean, X_SP_gauss, axes = [1,2]))
-plot_hist('/data/datasets/MRI/Gaussian_noisy_recon_hist_{}.png'.format(noise), x, y)
+plot_hist_pixels('/data/datasets/MRI/Gaussian_noisy_recon_mean_pixels_hist_{}.png'.format(noise), x, y)
 
 
