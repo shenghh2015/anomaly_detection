@@ -30,7 +30,7 @@ f = images[200,:,:]
 g = mask * fft.fft2(f)
 # The MP pseudoinverse is the IFFT (f_MP)
 # Take the real component as FFT and IFFT will introduce imaginary components
-cov = [[np.real(np.max(g)), 0],[0, np.real(np.max(g))]]
+cov = [[np.real(np.max(g))*100, 0],[0, np.real(np.max(g))*100]]
 z = np.squeeze(np.random.multivariate_normal(mean, cov, (dim, dim)).view(np.complex128))
 f_MP = fft.ifft2(g); f_MP = np.real(f_MP)
 g1 = g + z
