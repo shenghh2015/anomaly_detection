@@ -96,4 +96,26 @@ x = np.squeeze(np.apply_over_axes(np.mean, X_SA_gauss, axes = [1,2]))
 y = np.squeeze(np.apply_over_axes(np.mean, X_SP_gauss, axes = [1,2]))
 plot_hist('/data/datasets/MRI/Gaussian_noisy_hist_{}.png'.format(noise), x, y)
 
+## load noisy images
+dataset_folder = '/data/datasets/MRI'
+img = np.load(os.path.join(dataset_folder, 'axial_batch2_256x256.npy'))
+img_MP =  np.load(os.path.join(dataset_folder, 'axial_batch2_256x256_artifact_noisy.npy'))
+train, val, normal, anomaly = 65000, 200, 200, 200
+X_SA_trn, X_SA_val, X_SA_tst, X_SP_tst = img[:train,:], img[65000:65000+val,:], img[65600:65600+normal,:], img_MP[65600:65600+anomaly,:]
+noise = 40
+gauss1 = np.random.RandomState(0).normal(0, noise, X_SA_tst.shape)
+X_SA_gauss = X_SA_tst + gauss1
+X_SP_gauss = X_SP_tst
+X_SA_gauss, X_SP_gauss = normalize_0_1(X_SA_gauss), normalize_0_1(X_SP_gauss)
+Xt = np.concatenate([X_SA_gauss, X_SP_gauss], axis = 0)
+yt = np.concatenate([np.zeros((len(X_SA_gauss),1)), np.ones((len(X_SP_gauss),1))], axis = 0).flatten()
+# Xt_n = Xt + pois
+img_means = np.squeeze(np.apply_over_axes(np.mean, Xt, axes = [1,2]))
+mean_auc = roc_auc_score(yt, img_means)
+save_recon_images_1('/data/datasets/MRI/Gaussian_noisy_recon_image_{}.png'.format(noise), X_SA_gauss, X_SP_gauss, [11, 5])
+print('The AUC based on pixel mean: {0:.4f}'.format(mean_auc))
+x = np.squeeze(np.apply_over_axes(np.mean, X_SA_gauss, axes = [1,2]))
+y = np.squeeze(np.apply_over_axes(np.mean, X_SP_gauss, axes = [1,2]))
+plot_hist('/data/datasets/MRI/Gaussian_noisy_recon_hist_{}.png'.format(noise), x, y)
+
 
