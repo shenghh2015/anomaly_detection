@@ -13,6 +13,7 @@ dataset_folder = '/data/datasets/MRI'
 images = np.load(dataset_folder + '/axial_batch2_256x256.npy')
 f_MP_list = []
 for i in range(images.shape[0]):
+	
 	# Load the undersampling mask
 	mask = np.fromfile('./mask_4_fold_cartesian.dat',np.int32)
 	mask = mask.reshape(dim,dim)
@@ -23,7 +24,7 @@ for i in range(images.shape[0]):
 	plt.savefig('/data/datasets/MRI/mask_image.png')
 
 	# Generate the artifact images
-	f = images[200,:,:]
+	f = images[i,:,:]
 	# Perform forward operation (FFT followed by undersampling)
 	# The measurement data 'g' in MRI is called the 'k-space'
 	g = mask * fft.fft2(f)
