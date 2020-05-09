@@ -18,10 +18,10 @@ for i in range(images.shape[0]):
 	mask = np.fromfile('./mask_4_fold_cartesian.dat',np.int32)
 	mask = mask.reshape(dim,dim)
 	mask = fft.ifftshift(mask) # Since FFT is not centered we can shift the mask itself
-	plt.clf()
-	plt.figure(1); plt.imshow(mask,cmap='gray'); plt.title('Undersampling mask')
-	plt.show()
-	plt.savefig('/data/datasets/MRI/mask_image.png')
+# 	plt.clf()
+# 	plt.figure(1); plt.imshow(mask,cmap='gray'); plt.title('Undersampling mask')
+# 	plt.show()
+# 	plt.savefig('/data/datasets/MRI/mask_image.png')
 
 	# Generate the artifact images
 	f = images[i,:,:]
