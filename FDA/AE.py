@@ -32,7 +32,7 @@ def normalize_0_1(data):
 	return data[~np.isnan(image_sum),:]
 
 def pad_128(data):
-	return np.pad(data, ((0,0),(10,9),(10,9)), 'mean')
+	return np.pad(data, ((0,0),(10,9),(10,9)), 'constant')
 
 def print_yellow(str):
 	from termcolor import colored 
@@ -190,7 +190,7 @@ parser.add_argument("--res", type=str2bool, default = False)
 parser.add_argument("--lr", type=float, default = 1e-5)
 parser.add_argument("--step", type=int, default = 1000)
 parser.add_argument("--bz", type=int, default = 50)
-# parser.add_argument("--dataset", type=str, default = 'dense')
+parser.add_argument("--dataset", type=str, default = 'dense')
 parser.add_argument("--train", type=int, default = 65000)
 parser.add_argument("--val", type=int, default = 200)
 parser.add_argument("--test", type=int, default = 200)
@@ -211,7 +211,7 @@ residual = args.res
 lr = args.lr
 nb_steps = args.step
 batch_size = args.bz
-# dataset = args.dataset
+dataset = args.dataset
 train = args.train
 val = args.val
 test = args.test
@@ -221,26 +221,26 @@ version = args.version
 os.environ["CUDA_VISIBLE_DEVICES"] = str(gpu)
 
 if docker:
-	output_folder = '/data/results/MRI'
+	output_folder = '/data/results/FDA'
 else:
-	output_folder = './data/MRI'
+	output_folder = './data/FDA'
 
 ## model folder
-model_name = 'AE{}-{}-cn-{}-fr-{}-ks-{}-bn-{}-skp-{}-res-{}-lr-{}-stps-{}-bz-{}-tr-{}k-vl-{}-test-{}-n-{}'.format(version, os.path.basename(output_folder), nb_cnn, filters, kernel_size, batch_norm, skip, residual, lr, nb_steps, batch_size, int(train/1000), val, test,noise)
+model_name = 'FDA{}-{}-{}-cn-{}-fr-{}-ks-{}-bn-{}-skp-{}-res-{}-lr-{}-stps-{}-bz-{}-tr-{}k-vl-{}-test-{}-n-{}'.format(version, dataset, os.path.basename(output_folder), nb_cnn, filters, kernel_size, batch_norm, skip, residual, lr, nb_steps, batch_size, int(train/1000), val, test,noise)
 model_folder = os.path.join(output_folder, model_name)
 generate_folder(model_folder)
 
 #image size
-img_size = 256
+img_size = 128
 ## load dataset
-# X_SA_trn, X_SA_val, X_SA_tst, X_SP_tst = load_anomaly_data(dataset = dataset, train = train, valid = 400, test = 400)
+X_SA_trn, X_SA_val, X_SA_tst, X_SP_tst = load_anomaly_data(docker = docker, dataset = dataset, train = train, valid = 400, test = 400)
 # noise = 10
-X_SA_trn, X_SA_val, X_SA_tst, X_SP_tst = load_MRI_true_data(docker = docker, train = train, val = val, normal = test, anomaly = test, noise = noise)
+# X_SA_trn, X_SA_val, X_SA_tst, X_SP_tst = load_MRI_true_data(docker = docker, train = train, val = val, normal = test, anomaly = test, noise = noise)
 # save_recon_images_1(model_folder+'/data_example_{}.png'.format(noise), X_SA_tst, X_SP_tst, fig_size = [11,5])
 # 0-1 normalization
 X_SA_trn, X_SA_val, X_SA_tst, X_SP_tst = normalize_0_1(X_SA_trn), normalize_0_1(X_SA_val), normalize_0_1(X_SA_tst), normalize_0_1(X_SP_tst)
 # padding into 128x128 pixels
-# X_SA_trn, X_SA_val, X_SA_tst, X_SP_tst = pad_128(X_SA_trn), pad_128(X_SA_val), pad_128(X_SA_tst), pad_128(X_SP_tst)
+X_SA_trn, X_SA_val, X_SA_tst, X_SP_tst = pad_128(X_SA_trn), pad_128(X_SA_val), pad_128(X_SA_tst), pad_128(X_SP_tst)
 
 ## test data
 Xt = np.concatenate([X_SA_tst, X_SP_tst], axis = 0)
@@ -252,7 +252,7 @@ X_SA_trn, X_SA_val, X_SA_tst, X_SP_tst, Xt = np.expand_dims(X_SA_trn, axis = 3),
 
 # create the graph
 scope = 'base'
-x = tf.placeholder("float", shape=[None, 256, 256, 1])
+x = tf.placeholder("float", shape=[None, 128, 128, 1])
 if version == 1 or version ==2:
 	h1, h2, y = auto_encoder(x, nb_cnn = nb_cnn, bn = batch_norm, filters = filters, kernel_size = [kernel_size, kernel_size], scope_name = scope)
 elif version == 3:
