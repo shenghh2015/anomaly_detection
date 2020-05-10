@@ -28,8 +28,7 @@ def normalize_0_1(data):
 	data = (data - np.amin(np.amin(data, axis = -1), axis = -1).reshape(_shp))/\
 			(np.amax(np.amax(data, axis = -1), axis = -1).reshape(_shp)-\
 			np.amin(np.amin(data, axis = -1), axis = -1).reshape(_shp))
-	image_sum = np.squeeze(np.apply_over_axes(np.sum, data, axes = [1,2]))
-	return data[~np.isnan(image_sum),:]
+	return data
 
 def pad_128(data):
 	return np.pad(data, ((0,0),(10,9),(10,9)), 'mean')
@@ -66,37 +65,17 @@ def plot_LOSS(file_name, skip_points, train_loss_list, val_loss_list, norm_loss_
 	title = os.path.basename(os.path.dirname(file_name))
 	ax.set_title(title)
 	ax.set_xlabel('Iterations/100')
-	ax.set_ylabel('MSE')
+	ax.set_ylabel('log(mse)')
 	ax.legend(['Train','Valid','T-norm', 'T-Abnorm'])
 	ax.set_xlim([0,len(train_loss_list)])
 	canvas = FigureCanvasAgg(fig)
 	canvas.print_figure(file_name, dpi=100)
 
-# visualize one group of examples
-def save_recon_images_1(img_file_name, imgs, recons, fig_size):
-	from matplotlib.backends.backend_agg import FigureCanvasAgg
-	from matplotlib.figure import Figure
-	imgs, recons = np.squeeze(imgs), np.squeeze(recons)
-	test_size = imgs.shape[0]
-	indxs = np.random.randint(0,int(test_size),3)
-# 	fig_size = (8,6)
-	fig_size = fig_size
-	fig = Figure(figsize=fig_size)
-	rows, cols = 2, 3
-	ax = fig.add_subplot(rows, cols, 1); cax=ax.imshow(imgs[indxs[0],:],cmap='gray'); fig.colorbar(cax); ax.set_title('Image-{}'.format(indxs[0])); ax.set_ylabel('f') 
-	ax = fig.add_subplot(rows, cols, 2); cax=ax.imshow(imgs[indxs[1],:],cmap='gray'); fig.colorbar(cax); ax.set_title('Image-{}'.format(indxs[1]));
-	ax = fig.add_subplot(rows, cols, 3); cax=ax.imshow(imgs[indxs[2],:],cmap='gray'); fig.colorbar(cax); ax.set_title('Image-{}'.format(indxs[2]));
-	ax = fig.add_subplot(rows, cols, 4); cax=ax.imshow(recons[indxs[0],:],cmap='gray'); fig.colorbar(cax); ax.set_ylabel('f_MP')
-	ax = fig.add_subplot(rows, cols, 5); cax=ax.imshow(recons[indxs[1],:],cmap='gray'); fig.colorbar(cax);
-	ax = fig.add_subplot(rows, cols, 6); cax=ax.imshow(recons[indxs[2],:],cmap='gray'); fig.colorbar(cax);
-	canvas = FigureCanvasAgg(fig)
-	canvas.print_figure(img_file_name, dpi=100)
-
 def plot_hist(file_name, x, y):
 	import matplotlib.pyplot as plt
 	from matplotlib.backends.backend_agg import FigureCanvasAgg
 	from matplotlib.figure import Figure
-	kwargs = dict(alpha=0.6, bins=100, density= False, stacked=True)
+	kwargs = dict(alpha=0.6, bins=100, density=False, stacked=True)
 	fig_size = (8,6)
 	fig = Figure(figsize=fig_size)
 	file_name = file_name
@@ -108,28 +87,7 @@ def plot_hist(file_name, x, y):
 	title = os.path.basename(os.path.dirname(file_name))
 	ax.set_title(title)
 	ax.set_xlabel('Error')
-	ax.set_ylabel('Frequency')
-	ax.legend(['Norm', 'Anomaly'])
-	ax.set_xlim([np.min(np.concatenate([x,y])), np.max(np.concatenate([x,y]))])
-	canvas = FigureCanvasAgg(fig)
-	canvas.print_figure(file_name, dpi=100)
-
-def plot_hist_pixels(file_name, x, y):
-	import matplotlib.pyplot as plt
-	from matplotlib.backends.backend_agg import FigureCanvasAgg
-	from matplotlib.figure import Figure
-	kwargs = dict(alpha=0.6, bins=100, density= False, stacked=True)
-	fig_size = (8,6)
-	fig = Figure(figsize=fig_size)
-	file_name = file_name
-	ax = fig.add_subplot(111)
-	ax.hist(x, **kwargs, color='g', label='Norm')
-	ax.hist(y, **kwargs, color='r', label='Anomaly')
-	title = os.path.basename(os.path.dirname(file_name))
-	ax.set_title(title)
-# 	ax.set_xlabel('Error')
-	ax.set_xlabel('Mean of normalized pixel values')
-	ax.set_ylabel('Frequency')
+	ax.set_ylabel('Probalbity')
 	ax.legend(['Norm', 'Anomaly'])
 	ax.set_xlim([np.min(np.concatenate([x,y])), np.max(np.concatenate([x,y]))])
 	canvas = FigureCanvasAgg(fig)
@@ -187,15 +145,11 @@ parser.add_argument("--ks", type=int, default = 5)
 parser.add_argument("--bn", type=str2bool, default = True)
 parser.add_argument("--skp", type=str2bool, default = False)
 parser.add_argument("--res", type=str2bool, default = False)
-parser.add_argument("--lr", type=float, default = 1e-5)
+parser.add_argument("--lr", type=float, default = 1e-3)
 parser.add_argument("--step", type=int, default = 1000)
 parser.add_argument("--bz", type=int, default = 50)
-# parser.add_argument("--dataset", type=str, default = 'dense')
-parser.add_argument("--train", type=int, default = 65000)
-parser.add_argument("--val", type=int, default = 200)
-parser.add_argument("--test", type=int, default = 200)
-parser.add_argument("--noise", type=float, default = 0)
-parser.add_argument("--version", type=int, default = 1)
+parser.add_argument("--dataset", type=str, default = 'total')
+parser.add_argument("--train", type=int, default = 85000)
 
 args = parser.parse_args()
 print(args)
@@ -213,34 +167,28 @@ nb_steps = args.step
 batch_size = args.bz
 # dataset = args.dataset
 train = args.train
-val = args.val
-test = args.test
-noise = args.noise
-version = args.version
 
 os.environ["CUDA_VISIBLE_DEVICES"] = str(gpu)
 
 if docker:
-	output_folder = '/data/results/MRI'
+	output_folder = '/data/results/FDA'
 else:
-	output_folder = './data/MRI'
+	output_folder = './data/FDA'
 
 ## model folder
-model_name = 'AE{}-{}-cn-{}-fr-{}-ks-{}-bn-{}-skp-{}-res-{}-lr-{}-stps-{}-bz-{}-tr-{}k-vl-{}-test-{}-n-{}'.format(version, os.path.basename(output_folder), nb_cnn, filters, kernel_size, batch_norm, skip, residual, lr, nb_steps, batch_size, int(train/1000), val, test,noise)
+model_name = 'AE-{}-cn-{}-fr-{}-ks-{}-bn-{}-skp-{}-res-{}-lr-{}-stps-{}-bz-{}'.format(os.path.basename(output_folder), nb_cnn, filters, kernel_size, batch_norm, skip, residual, lr, nb_steps, batch_size)
 model_folder = os.path.join(output_folder, model_name)
 generate_folder(model_folder)
 
 #image size
 img_size = 256
 ## load dataset
-# X_SA_trn, X_SA_val, X_SA_tst, X_SP_tst = load_anomaly_data(dataset = dataset, train = train, valid = 400, test = 400)
-# noise = 10
-X_SA_trn, X_SA_val, X_SA_tst, X_SP_tst = load_MRI_true_data(docker = docker, train = train, val = val, normal = test, anomaly = test, noise = noise)
-# save_recon_images_1(model_folder+'/data_example_{}.png'.format(noise), X_SA_tst, X_SP_tst, fig_size = [11,5])
+X_SA_trn, X_SA_val, X_SA_tst, X_SP_tst = load_anomaly_data(dataset = dataset, train = train, valid = 400, test = 400)
+# X_SA_trn, X_SA_val, X_SA_tst, X_SP_tst = load_MRI_true_data(docker = docker, train = train, val = 200, normal = 200, anomaly = 200)
 # 0-1 normalization
 X_SA_trn, X_SA_val, X_SA_tst, X_SP_tst = normalize_0_1(X_SA_trn), normalize_0_1(X_SA_val), normalize_0_1(X_SA_tst), normalize_0_1(X_SP_tst)
 # padding into 128x128 pixels
-# X_SA_trn, X_SA_val, X_SA_tst, X_SP_tst = pad_128(X_SA_trn), pad_128(X_SA_val), pad_128(X_SA_tst), pad_128(X_SP_tst)
+X_SA_trn, X_SA_val, X_SA_tst, X_SP_tst = pad_128(X_SA_trn), pad_128(X_SA_val), pad_128(X_SA_tst), pad_128(X_SP_tst)
 
 ## test data
 Xt = np.concatenate([X_SA_tst, X_SP_tst], axis = 0)
@@ -252,12 +200,8 @@ X_SA_trn, X_SA_val, X_SA_tst, X_SP_tst, Xt = np.expand_dims(X_SA_trn, axis = 3),
 
 # create the graph
 scope = 'base'
-x = tf.placeholder("float", shape=[None, 256, 256, 1])
-if version == 1 or version ==2:
-	h1, h2, y = auto_encoder(x, nb_cnn = nb_cnn, bn = batch_norm, filters = filters, kernel_size = [kernel_size, kernel_size], scope_name = scope)
-elif version == 3:
-	h1, h2, y = auto_encoder2(x, nb_cnn = nb_cnn, bn = batch_norm, filters = filters, kernel_size = [kernel_size, kernel_size], scope_name = scope)
-
+x = tf.placeholder("float", shape=[None, 128, 128, 1])
+h1, h2, y = auto_encoder(x, nb_cnn = nb_cnn, bn = batch_norm, filters = filters, kernel_size = [kernel_size, kernel_size], scope_name = scope)
 sqr_err = tf.square(y - x)
 cost = tf.reduce_mean(sqr_err)
 
@@ -269,10 +213,6 @@ for key, var in zip(key_list, vars_list):
 	key_direct[key] = var
 saver = tf.train.Saver(key_direct, max_to_keep=nb_steps)
 
-# print out trainable parameters
-for v in key_list:
-	print_green(v)
-
 trn_step = tf.train.AdamOptimizer(lr).minimize(cost, var_list= vars_list)
 
 # training
@@ -282,7 +222,7 @@ norm_err_list = []
 anomaly_err_list = []
 auc_list = []
 
-# nb_steps = 5000
+nb_steps = 5000
 best_val_err = np.inf
 # sess = tf.Session()
 with tf.Session() as sess:
@@ -291,7 +231,7 @@ with tf.Session() as sess:
 		indices = np.random.randint(0, X_SA_trn.shape[0]-1, batch_size)
 		batch_x = X_SA_trn[indices,:]
 		sess.run(trn_step, feed_dict={x: batch_x})
-		if iteration%100 == 0:
+		if iteration%5 == 0:
 			trn_err = cost.eval(session = sess, feed_dict = {x:batch_x})
 			val_err = cost.eval(session = sess, feed_dict = {x:X_SA_val})
 			tst_SA_err = cost.eval(session = sess, feed_dict = {x:X_SA_tst})
@@ -326,13 +266,10 @@ with tf.Session() as sess:
 			plot_AUC(auc_file, auc_list)
 			if best_val_err > val_err:
 				best_val_err = val_err
-				np.savetxt(os.path.join(model_folder,'AE_stat.txt'), tst_img_errs)
-				np.savetxt(os.path.join(model_folder,'Pixel_mean_stat.txt'), img_means)
-				np.savetxt(os.path.join(model_folder,'best_auc.txt'),[test_auc, mean_auc])
+				np.savetxt(os.path.join(model_folder,'best_auc.txt'),auc_list)
 				hist_file = os.path.join(model_folder,'hist-{}.png'.format(model_name))
-				plot_hist(hist_file, tst_img_errs[:int(len(tst_img_errs)/2)], tst_img_errs[int(len(tst_img_errs)/2):])
-				plot_hist_pixels(model_folder+'/hist_mean_pixel.png'.format(model_name), img_means[:int(len(img_means)/2)], img_means[int(len(img_means)/2):])
-				saver.save(sess, model_folder +'/best')
+				plot_hist(hist_file, tst_SA_err.flatten(), tst_SP_err.flatten())
+				saver.save(sess, model_folder +'/best', global_step= iteration)
 				print_red('update best: {}'.format(model_name))
 				# save reconstructed images
 				img_file_name = os.path.join(model_folder,'recon-{}.png'.format(model_name))
