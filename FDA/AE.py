@@ -298,6 +298,11 @@ with tf.Session() as sess:
 			tst_SP_err = cost.eval(session = sess, feed_dict = {x:X_SP_tst})
 			y_recon = y.eval(session = sess, feed_dict = {x:Xt})			
 			tst_pixel_errs = sqr_err.eval(session = sess, feed_dict = {x:Xt})
+			max_val, min_val = np.max(tst_pixel_errs), np.min(tst_pixel_errs)
+			for i in range(tst_pixel_errs.shape[0]):
+				err = tst_pixel_errs[i,:]; err = (err -np.min(err))/(np.max(err)-np.min(err))*(max_val -min_val)+min_val 
+				tst_pixel_errs1.append(err.reshape(1,128,128,1))
+			tst_pixel_errs = np.concatenate(tst_pixel_errs1)
 			img_means = np.squeeze(np.apply_over_axes(np.mean, Xt, axes = [1,2,3]))
 			tst_img_errs = np.squeeze(np.apply_over_axes(np.mean, tst_pixel_errs, axes = [1,2,3]))
 			test_auc = roc_auc_score(yt, tst_img_errs)
