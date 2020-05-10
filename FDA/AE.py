@@ -226,7 +226,7 @@ else:
 	output_folder = './data/FDA'
 
 ## model folder
-model_name = 'FDA{}-{}-{}-cn-{}-fr-{}-ks-{}-bn-{}-skp-{}-res-{}-lr-{}-stps-{}-bz-{}-tr-{}k-vl-{}-test-{}-n-{}'.format(version, dataset, os.path.basename(output_folder), nb_cnn, filters, kernel_size, batch_norm, skip, residual, lr, nb_steps, batch_size, int(train/1000), val, test,noise)
+model_name = 'FDA{}-{}-{}-cn-{}-fr-{}-ks-{}-bn-{}-skp-{}-res-{}-lr-{}-stps-{}-bz-{}-tr-{}k-vl-{}-test-{}'.format(version, dataset, os.path.basename(output_folder), nb_cnn, filters, kernel_size, batch_norm, skip, residual, lr, nb_steps, batch_size, int(train/1000), val, test)
 model_folder = os.path.join(output_folder, model_name)
 generate_folder(model_folder)
 
@@ -300,9 +300,6 @@ with tf.Session() as sess:
 			tst_pixel_errs = sqr_err.eval(session = sess, feed_dict = {x:Xt})
 			img_means = np.squeeze(np.apply_over_axes(np.mean, Xt, axes = [1,2,3]))
 			tst_img_errs = np.squeeze(np.apply_over_axes(np.mean, tst_pixel_errs, axes = [1,2,3]))
-			if np.isnan(np.sum(tst_img_errs)):
-				print_green('Pass!!!')
-				continue
 			test_auc = roc_auc_score(yt, tst_img_errs)
 			mean_auc = roc_auc_score(yt, img_means)
 			print_block(symbol = '-', nb_sybl = 50)
