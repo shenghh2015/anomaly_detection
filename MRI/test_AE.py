@@ -202,13 +202,13 @@ gpu = 1; docker = True
 os.environ["CUDA_VISIBLE_DEVICES"] = str(gpu)
 
 if docker:
-	output_folder = '/data/results/MRI'
+	output_folder = '/data/results/MRI/MRI_AE'
 else:
 	output_folder = './data/MRI'
 
-model_name = 'AE2-MRI-cn-4-fr-32-ks-3-bn-True-skp-False-res-False-lr-0.0001-stps-200000-bz-50-tr-65k-vl-200-test-200-n-0.0'
+#model_name = 'AE2-MRI-cn-4-fr-32-ks-3-bn-True-skp-False-res-False-lr-0.0001-stps-200000-bz-50-tr-65k-vl-200-test-200-n-0.0'
 #model_name = 'AE2-MRI-cn-4-fr-32-ks-3-bn-True-skp-False-res-False-lr-0.0001-stps-200000-bz-50-tr-65k-vl-200-test-200-n-40.0'
-#model_name = 'AE1-MRI-cn-4-fr-32-ks-5-bn-True-skp-False-res-False-lr-0.0001-stps-300000-bz-50-tr-65k-vl-200-test-200-n-50.0'
+model_name = 'AE1-MRI-cn-4-fr-32-ks-5-bn-True-skp-False-res-False-lr-0.0001-stps-300000-bz-50-tr-65k-vl-200-test-200-n-50.0'
 splits = model_name.split('-')
 if len(splits[0])<=2:
 	version =1
@@ -271,9 +271,9 @@ for v in key_list:
 # max_val, min_val = 100, 45
 with tf.Session() as sess:
 	tf.global_variables_initializer().run(session=sess)
-# 	saver.restore(sess, model_folder+'/best-170600')  # noise 40
-# 	saver.restore(sess, model_folder+'/best-184100')  # noise 50
-	saver.restore(sess, model_folder+'/best-192600')  # noise 0
+	saver.restore(sess, model_folder+'/best-184100')  # noise 50
+	# saver.restore(sess, model_folder+'/best-170600')  # noise 40
+	# saver.restore(sess, model_folder+'/best-192600')  # noise 0
 	y_recon = y.eval(session = sess, feed_dict = {x:Xt})			
 	tst_pixel_errs = sqr_err.eval(session = sess, feed_dict = {x:Xt})
 	tst_pixel_errs1 = []
@@ -294,7 +294,7 @@ with tf.Session() as sess:
 	np.savetxt(os.path.join(model_folder,'best_auc_n.txt'),[test_auc, mean_auc])
 	hist_file = os.path.join(model_folder,'hist_n-{}.png'.format(model_name))
 	plot_hist(hist_file, tst_img_errs[:int(len(tst_img_errs)/2)], tst_img_errs[int(len(tst_img_errs)/2):])
-	plot_hist_pixels(model_folder+'/hist_mean_pixel.png'.format(model_name), tst_img_errs[:int(len(tst_img_errs)/2)], tst_img_errs[int(len(tst_img_errs)/2):])
+	plot_hist_pixels(model_folder+'/hist_mean_pixel.png'.format(model_name), img_means[:int(len(img_means)/2)], img_means[int(len(img_means)/2):])
 	print_red('update best: {}'.format(model_name))
 	saver.save(sess, model_folder +'/best')
 	img_file_name = os.path.join(model_folder,'recon_n-{}.png'.format(model_name))
