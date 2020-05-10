@@ -299,6 +299,7 @@ with tf.Session() as sess:
 			y_recon = y.eval(session = sess, feed_dict = {x:Xt})			
 			tst_pixel_errs = sqr_err.eval(session = sess, feed_dict = {x:Xt})
 			max_val, min_val = np.max(tst_pixel_errs), np.min(tst_pixel_errs)
+			tst_pixel_errs1 = []
 			for i in range(tst_pixel_errs.shape[0]):
 				err = tst_pixel_errs[i,:]; err = (err -np.min(err))/(np.max(err)-np.min(err))*(max_val -min_val)+min_val 
 				tst_pixel_errs1.append(err.reshape(1,128,128,1))
