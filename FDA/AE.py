@@ -179,7 +179,7 @@ def generate_folder(folder):
 		os.system('mkdir -p {}'.format(folder))
 
 parser = argparse.ArgumentParser()
-parser.add_argument("--gpu", type=int, default = 0)
+parser.add_argument("--gpu", type=int, default = 1)
 parser.add_argument("--docker", type = str2bool, default = True)
 parser.add_argument("--cn", type=int, default = 4)
 parser.add_argument("--fr", type=int, default = 32)
