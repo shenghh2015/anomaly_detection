@@ -261,17 +261,7 @@ if version == 1 or version ==2:
 elif version == 3:
 	h1, h2, y = auto_encoder2(x, nb_cnn = nb_cnn, bn = batch_norm, filters = filters, kernel_size = [kernel_size, kernel_size], scope_name = scope)
 
-if loss == 'mse':
-	err_map = tf.square(y - x) 
-elif loss == 'correntropy':
-	sigma = 10.0
-	err_map = -tf.exp(-tf.square(x - y)/sigma)
-elif loss == 'ssim':
-	err_map = 1- tf.image.ssim(y, x, max_val = 1.0)
-elif loss == 'bce':
-	err_map = -x*tf.log(tf.math.sigmoid(y)) - (1-x)*tf.log(1-tf.math.sigmoid(y))
-
-err_mean = tf.reduce_mean(err_map, [1,2,3])
+err_mean = 1- tf.image.ssim(y, x, max_val = 1.0)
 cost = tf.reduce_mean(err_mean)
 	
 # create a saver
@@ -317,20 +307,11 @@ with tf.Session() as sess:
 			tst_SA_err = cost.eval(session = sess, feed_dict = {x:X_SA_tst})
 			tst_SP_err = cost.eval(session = sess, feed_dict = {x:X_SP_tst})
 			y_recon = y.eval(session = sess, feed_dict = {x:Xt})
-			tst_pixel_errs = err_map.eval(session = sess, feed_dict = {x:Xt})
-			tst_img_errs = np.squeeze(np.apply_over_axes(np.mean, tst_pixel_errs, axes = [1,2,3]))
-			# normalized errs
-			max_val, min_val = np.max(tst_pixel_errs), np.min(tst_pixel_errs)
-			tst_pixel_errs1 = []
-			for i in range(tst_pixel_errs.shape[0]):
-				err = tst_pixel_errs[i,:]; err = (err -np.min(err))/(np.max(err)-np.min(err))*(max_val -min_val)+min_val 
-				tst_pixel_errs1.append(err.reshape(1,256,256,1))
-			tst_pixel_errs_n = np.concatenate(tst_pixel_errs1)
-			tst_img_errs_n = np.squeeze(np.apply_over_axes(np.mean, tst_pixel_errs_n, axes = [1,2,3]))
-			test_auc = roc_auc_score(yt, tst_img_errs); test_auc_n = roc_auc_score(yt, tst_img_errs_n);
+			tst_img_errs = err_mean.eval(session = sess, feed_dict = {x:Xt})
+			test_auc = roc_auc_score(yt, tst_img_errs);
 			print_block(symbol = '-', nb_sybl = 50)
-			print_yellow('RE: train {0:.4f}, val {1:.4f}, normal {2:.4f}, abnormal {3:.4f}; AUC: AE {4:.4f}, AE+normlize {5:.4f}, M: {6:.4f}; iter {7:}'.\
-					format(trn_err, val_err, tst_SA_err, tst_SP_err, test_auc, test_auc_n, mean_auc, iteration))
+			print_yellow('RE: train {0:.4f}, val {1:.4f}, normal {2:.4f}, abnormal {3:.4f}; AUC: AE {4:.4f}, M: {5:.4f}; iter {6:}'.\
+					format(trn_err, val_err, tst_SA_err, tst_SP_err, test_auc, mean_auc, iteration))
 			print(model_name)
 			# save model
 			saver.save(sess, model_folder +'/model', global_step= iteration)
@@ -338,29 +319,20 @@ with tf.Session() as sess:
 			trn_err_list, val_err_list, norm_err_list, anomaly_err_list, auc_list =\
 				np.append(trn_err_list, trn_err), np.append(val_err_list, val_err),\
 					np.append(norm_err_list, tst_SA_err), np.append(anomaly_err_list, tst_SP_err), np.append(auc_list, test_auc)
-			n_auc_list.append(test_auc_n)
 			np.savetxt(os.path.join(model_folder,'train_loss.txt'), trn_err_list)
 			np.savetxt(os.path.join(model_folder,'val_loss.txt'), val_err_list)
 			np.savetxt(os.path.join(model_folder,'norm_loss.txt'), norm_err_list)
 			np.savetxt(os.path.join(model_folder,'anomaly_loss.txt'),anomaly_err_list)
 			np.savetxt(os.path.join(model_folder,'test_auc.txt'),auc_list)
-			np.savetxt(os.path.join(model_folder,'test_auc_n.txt'),n_auc_list)
-			loss_file = os.path.join(model_folder,'loss-{}.png'.format(model_name))
-			plot_LOSS(loss_file, 0, trn_err_list, val_err_list, norm_err_list, anomaly_err_list)
-			auc_file = os.path.join(model_folder,'auc-{}.png'.format(model_name))
-			plot_AUC(auc_file, auc_list); plot_AUC(model_folder+'/n_auc-{}.png'.format(model_name), n_auc_list)
+			plot_LOSS(model_folder,'loss-{}.png'.format(model_name), 0, trn_err_list, val_err_list, norm_err_list, anomaly_err_list)
+			auc_file = os.path.join(model_folder,'auc-{}.png'.format(model_name)); plot_AUC(auc_file, auc_list)
 			if best_val_err > val_err:
 				best_val_err = val_err
 				np.savetxt(os.path.join(model_folder,'AE_stat.txt'), tst_img_errs)
-				np.savetxt(os.path.join(model_folder,'AE_n_stat.txt'), tst_img_errs_n)
-				np.savetxt(os.path.join(model_folder,'best_auc.txt'),[test_auc, test_auc_n, mean_auc])
-				hist_file = os.path.join(model_folder,'hist-{}.png'.format(model_name))
-				plot_hist(hist_file, tst_img_errs[:int(len(tst_img_errs)/2)], tst_img_errs[int(len(tst_img_errs)/2):])
-				plot_hist(model_folder+'/hist-n-{}.png'.format(model_name), tst_img_errs_n[:int(len(tst_img_errs_n)/2)], tst_img_errs_n[int(len(tst_img_errs_n)/2):])
+				np.savetxt(os.path.join(model_folder,'best_auc.txt'),[test_auc, mean_auc])
+				plot_hist(model_folder,'hist-{}.png'.format(model_name), tst_img_errs[:int(len(tst_img_errs)/2)], tst_img_errs[int(len(tst_img_errs)/2):])
 				saver.save(sess, model_folder +'/best')
 				print_red('update best: {}'.format(model_name))
 				# save reconstructed images
 				img_file_name = os.path.join(model_folder,'recon-{}.png'.format(model_name))
-				save_recon_images(img_file_name, Xt, y_recon, tst_pixel_errs, fig_size = [11,5])
-				img_file_name = os.path.join(model_folder,'recon-n-{}.png'.format(model_name))
-				save_recon_images(img_file_name, Xt, y_recon, tst_pixel_errs_n, fig_size = [11,5])
+				save_recon_images(img_file_name, Xt, y_recon, y_recon, fig_size = [11,5])

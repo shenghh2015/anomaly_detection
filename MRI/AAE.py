@@ -266,10 +266,10 @@ if loss == 'mse':
 elif loss == 'correntropy':
 	sigma = 10.0
 	err_map = -tf.exp(-tf.square(x - y)/sigma)
-elif loss == 'ssim':
-	err_map = 1- tf.image.ssim(y, x, max_val = 1.0)
-elif loss == 'bce':
-	err_map = -x*tf.log(tf.math.sigmoid(y)) - (1-x)*tf.log(1-tf.math.sigmoid(y))
+# elif loss == 'ssim':
+# 	err_map = 1- tf.image.ssim(y, x, max_val = 1.0)
+# elif loss == 'bce':
+# 	err_map = -x*tf.log(tf.math.sigmoid(y)) - (1-x)*tf.log(1-tf.math.sigmoid(y))
 
 err_mean = tf.reduce_mean(err_map, [1,2,3])
 cost = tf.reduce_mean(err_mean)
