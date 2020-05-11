@@ -195,7 +195,7 @@ def generate_folder(folder):
 # 			noise = float(splits[i+1])
 # 	return nb_cnn, filters, kernel_size, train, val, test, noise
 
-gpu = 1; docker = True
+gpu = 0; docker = True
 # noise = 0; version = 2
 # train, val, test = 65000, 200, 200
 
@@ -208,7 +208,8 @@ else:
 
 #model_name = 'AE2-MRI-cn-4-fr-32-ks-3-bn-True-skp-False-res-False-lr-0.0001-stps-200000-bz-50-tr-65k-vl-200-test-200-n-0.0'
 #model_name = 'AE2-MRI-cn-4-fr-32-ks-3-bn-True-skp-False-res-False-lr-0.0001-stps-200000-bz-50-tr-65k-vl-200-test-200-n-40.0'
-model_name = 'AE1-MRI-cn-4-fr-32-ks-5-bn-True-skp-False-res-False-lr-0.0001-stps-300000-bz-50-tr-65k-vl-200-test-200-n-50.0'
+# model_name = 'AE1-MRI-cn-4-fr-32-ks-5-bn-True-skp-False-res-False-lr-0.0001-stps-300000-bz-50-tr-65k-vl-200-test-200-n-50.0'
+model_name = 'AE2-MRI-cn-6-fr-32-ks-3-bn-True-skp-False-res-False-lr-0.0001-stps-200000-bz-50-tr-65k-vl-200-test-200-n-40.0-l-correntropy'
 splits = model_name.split('-')
 if len(splits[0])<=2:
 	version =1
@@ -256,6 +257,8 @@ elif version == 2:
 	h1, h2, y = auto_encoder(x, nb_cnn = nb_cnn, bn = batch_norm, filters = filters, kernel_size = [kernel_size, kernel_size], scope_name = scope)
 sqr_err = tf.square(y - x)
 ssim_err = 1- tf.image.ssim(y, x, max_val = 1.0)
+sigma = 0.1
+err_correntropy = -tf.exp(-tf.square(x - y)/sigma)
 
 # create a saver
 vars_list = tf.trainable_variables(scope)
@@ -269,16 +272,21 @@ saver = tf.train.Saver(key_direct, max_to_keep=1)
 for v in key_list:
 	print_green(v)
 
+continue_train = True
 # max_val, min_val = 100, 45
 with tf.Session() as sess:
 	tf.global_variables_initializer().run(session=sess)
-	saver.restore(sess, model_folder+'/best-184100')  # noise 50
+	saver.restore(sess, model_folder+'/best')
+	#saver.restore(sess, model_folder+'/best-184100')  # noise 50
 	# saver.restore(sess, model_folder+'/best-170600')  # noise 40
 	# saver.restore(sess, model_folder+'/best-192600')  # noise 0
 	y_recon = y.eval(session = sess, feed_dict = {x:Xt})
+	recon_means = np.squeeze(np.apply_over_axes(np.mean, y_recon, axes = [1,2,3]))
+	recon_auc = roc_auc_score(yt, recon_means)
+	print_yellow('AUC: Recon Mean {0:.4f}'.format(recon_auc))
 	ssim_errs = ssim_err.eval(session = sess, feed_dict = {x:Xt})
 	ssim_auc = roc_auc_score(yt, ssim_errs)
-	print_yellow('AUC: SSIM {0:.4f}'.format(ssim_auc))			
+	print_yellow('AUC: SSIM {0:.4f}'.format(ssim_auc))
 	tst_pixel_errs = sqr_err.eval(session = sess, feed_dict = {x:Xt})
 	tst_pixel_errs1 = []
 	max_val, min_val = np.max(tst_pixel_errs), np.min(tst_pixel_errs)
@@ -303,4 +311,23 @@ with tf.Session() as sess:
 	saver.save(sess, model_folder +'/best')
 	img_file_name = os.path.join(model_folder,'recon_n-{}.png'.format(model_name))
 	save_recon_images(img_file_name, Xt, y_recon, tst_pixel_errs, fig_size = [11,5])
+	
+	if continue_train:
+		recon_train = []
+		batch_size = 50
+		i = 0
+		while(batch_size*i < X_SA_trn.shape[0]):
+			if i % 100 == 0:
+				print('{}-th batch'.format(i))
+			batch_x = X_SA_trn[batch_size*i:min(batch_size*(i+1),X_SA_trn.shape[0])]
+			recon_train.append(y.eval(session = sess, feed_dict = {x:batch_x}))
+			i = i+1
+		recon_val = y.eval(session = sess, feed_dict = {x:X_SA_val})
+		recon_tst = y.eval(session = sess, feed_dict = {x:X_SA_tst})
+		recon_anomaly = y.eval(session = sess, feed_dict = {x: X_SP_tst})
+		generate_folder(model_folder + '/output_dataset')
+		np.save(model_folder + '/train.npy', recon_train_arr)
+		np.save(model_folder + '/val.npy', recon_val)
+		np.save(model_folder +'/test.npy', recon_tst)
+		np.save(model_folder + 'anomaly.npy', recon_anomaly)
 	

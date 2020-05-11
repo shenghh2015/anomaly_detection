@@ -228,22 +228,25 @@ else:
 	output_folder = './data/MRI'
 
 ## model folder
-model_name = 'AE{}-{}-cn-{}-fr-{}-ks-{}-bn-{}-skp-{}-res-{}-lr-{}-stps-{}-bz-{}-tr-{}k-vl-{}-test-{}-n-{}-l-{}'.format(version, os.path.basename(output_folder), nb_cnn, filters, kernel_size, batch_norm, skip, residual, lr, nb_steps, batch_size, int(train/1000), val, test,noise, loss)
+model_name = 'f-AE{}-{}-cn-{}-fr-{}-ks-{}-bn-{}-skp-{}-res-{}-lr-{}-stps-{}-bz-{}-tr-{}k-vl-{}-test-{}-n-{}-l-{}'.format(version, os.path.basename(output_folder), nb_cnn, filters, kernel_size, batch_norm, skip, residual, lr, nb_steps, batch_size, int(train/1000), val, test,noise, loss)
 model_folder = os.path.join(output_folder, model_name)
 generate_folder(model_folder)
 
 #image size
 img_size = 256
 ## load dataset
+data_folder = output_folder+'/AE2-MRI-cn-6-fr-32-ks-3-bn-True-skp-False-res-False-lr-0.0001-stps-200000-bz-50-tr-65k-vl-200-test-200-n-40.0-l-correntropy'
+X_SA_trn = np.load(data_folder + '/train.npy'); X_SA_val = np.load(data_folder +'/val.npy')
+X_SA_tst = np.load(data_folder + '/tst.npy'); X_SP_tst = np.load(data_folder + '/anomaly.npy')
 # X_SA_trn, X_SA_val, X_SA_tst, X_SP_tst = load_anomaly_data(dataset = dataset, train = train, valid = 400, test = 400)
 # noise = 10
-X_SA_trn, X_SA_val, X_SA_tst, X_SP_tst = load_MRI_true_data(docker = docker, train = train, val = val, normal = test, anomaly = test, noise = noise)
-print_green('Mean: trn {0:.4f}, val {1:.4f}, tst {2:.4f}, anomaly {3:.4f}'.format(np.mean(X_SA_trn), np.mean(X_SA_val), np.mean(X_SA_tst), np.mean(X_SP_tst)))
-print_green('Maxi: trn {0:.4f}, val {1:.4f}, tst {2:.4f}, anomaly {3:.4f}'.format(np.max(X_SA_trn), np.max(X_SA_val), np.max(X_SA_tst), np.max(X_SP_tst)))
-print_green('Mini: trn {0:.4f}, val {1:.4f}, tst {3:.4f}, anomaly {3:.4f}'.format(np.min(X_SA_trn), np.min(X_SA_val), np.min(X_SA_tst), np.min(X_SP_tst)))
+# X_SA_trn, X_SA_val, X_SA_tst, X_SP_tst = load_MRI_true_data(docker = docker, train = train, val = val, normal = test, anomaly = test, noise = noise)
+# print_green('Mean: trn {0:.4f}, val {1:.4f}, tst {2:.4f}, anomaly {3:.4f}'.format(np.mean(X_SA_trn), np.mean(X_SA_val), np.mean(X_SA_tst), np.mean(X_SP_tst)))
+# print_green('Maxi: trn {0:.4f}, val {1:.4f}, tst {2:.4f}, anomaly {3:.4f}'.format(np.max(X_SA_trn), np.max(X_SA_val), np.max(X_SA_tst), np.max(X_SP_tst)))
+# print_green('Mini: trn {0:.4f}, val {1:.4f}, tst {3:.4f}, anomaly {3:.4f}'.format(np.min(X_SA_trn), np.min(X_SA_val), np.min(X_SA_tst), np.min(X_SP_tst)))
 
 # 0-1 normalization
-X_SA_trn, X_SA_val, X_SA_tst, X_SP_tst = normalize_0_1(X_SA_trn), normalize_0_1(X_SA_val), normalize_0_1(X_SA_tst), normalize_0_1(X_SP_tst)
+# X_SA_trn, X_SA_val, X_SA_tst, X_SP_tst = normalize_0_1(X_SA_trn), normalize_0_1(X_SA_val), normalize_0_1(X_SA_tst), normalize_0_1(X_SP_tst)
 # padding into 128x128 pixels
 # X_SA_trn, X_SA_val, X_SA_tst, X_SP_tst = pad_128(X_SA_trn), pad_128(X_SA_val), pad_128(X_SA_tst), pad_128(X_SP_tst)
 
@@ -252,8 +255,8 @@ Xt = np.concatenate([X_SA_tst, X_SP_tst], axis = 0)
 yt = np.concatenate([np.zeros((len(X_SA_tst),1)), np.ones((len(X_SP_tst),1))], axis = 0).flatten()
 
 ## Dimension adjust
-X_SA_trn, X_SA_val, X_SA_tst, X_SP_tst, Xt = np.expand_dims(X_SA_trn, axis = 3), np.expand_dims(X_SA_val, axis = 3), np.expand_dims(X_SA_tst, axis = 3),\
-		 np.expand_dims(X_SP_tst, axis = 3), np.expand_dims(Xt, axis = 3)
+# X_SA_trn, X_SA_val, X_SA_tst, X_SP_tst, Xt = np.expand_dims(X_SA_trn, axis = 3), np.expand_dims(X_SA_val, axis = 3), np.expand_dims(X_SA_tst, axis = 3),\
+# 		 np.expand_dims(X_SP_tst, axis = 3), np.expand_dims(Xt, axis = 3)
 
 
 # create the graph
