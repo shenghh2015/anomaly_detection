@@ -255,6 +255,7 @@ if version == 1:
 elif version == 2:
 	h1, h2, y = auto_encoder(x, nb_cnn = nb_cnn, bn = batch_norm, filters = filters, kernel_size = [kernel_size, kernel_size], scope_name = scope)
 sqr_err = tf.square(y - x)
+ssim_err = 1- tf.image.ssim(y, x, max_val = 1.0)
 
 # create a saver
 vars_list = tf.trainable_variables(scope)
@@ -274,7 +275,10 @@ with tf.Session() as sess:
 	saver.restore(sess, model_folder+'/best-184100')  # noise 50
 	# saver.restore(sess, model_folder+'/best-170600')  # noise 40
 	# saver.restore(sess, model_folder+'/best-192600')  # noise 0
-	y_recon = y.eval(session = sess, feed_dict = {x:Xt})			
+	y_recon = y.eval(session = sess, feed_dict = {x:Xt})
+	ssim_errs = ssim_err.eval(session = sess, feed_dict = {x:Xt})
+	ssim_auc = roc_auc_score(yt, ssim_errs)
+	print_yellow('AUC: SSIM {0:.4f}'.format(ssim_auc))			
 	tst_pixel_errs = sqr_err.eval(session = sess, feed_dict = {x:Xt})
 	tst_pixel_errs1 = []
 	max_val, min_val = np.max(tst_pixel_errs), np.min(tst_pixel_errs)
