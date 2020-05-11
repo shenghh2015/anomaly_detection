@@ -324,13 +324,13 @@ with tf.Session() as sess:
 			np.savetxt(os.path.join(model_folder,'norm_loss.txt'), norm_err_list)
 			np.savetxt(os.path.join(model_folder,'anomaly_loss.txt'),anomaly_err_list)
 			np.savetxt(os.path.join(model_folder,'test_auc.txt'),auc_list)
-			plot_LOSS(model_folder,'loss-{}.png'.format(model_name), 0, trn_err_list, val_err_list, norm_err_list, anomaly_err_list)
+			plot_LOSS(model_folder+'/loss-{}.png'.format(model_name), 0, trn_err_list, val_err_list, norm_err_list, anomaly_err_list)
 			auc_file = os.path.join(model_folder,'auc-{}.png'.format(model_name)); plot_AUC(auc_file, auc_list)
 			if best_val_err > val_err:
 				best_val_err = val_err
 				np.savetxt(os.path.join(model_folder,'AE_stat.txt'), tst_img_errs)
 				np.savetxt(os.path.join(model_folder,'best_auc.txt'),[test_auc, mean_auc])
-				plot_hist(model_folder,'hist-{}.png'.format(model_name), tst_img_errs[:int(len(tst_img_errs)/2)], tst_img_errs[int(len(tst_img_errs)/2):])
+				plot_hist(model_folder+'/hist-{}.png'.format(model_name), tst_img_errs[:int(len(tst_img_errs)/2)], tst_img_errs[int(len(tst_img_errs)/2):])
 				saver.save(sess, model_folder +'/best')
 				print_red('update best: {}'.format(model_name))
 				# save reconstructed images
