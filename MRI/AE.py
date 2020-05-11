@@ -264,7 +264,7 @@ elif version == 3:
 if loss == 'mse':
 	err_map = tf.square(y - x) 
 elif loss == 'correntropy':
-	sigma = 10.0
+	sigma = 0.1
 	err_map = -tf.exp(-tf.square(x - y)/sigma)
 elif loss == 'ssim':
 	err_map = 1- tf.image.ssim(y, x, max_val = 1.0)
