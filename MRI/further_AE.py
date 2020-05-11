@@ -237,7 +237,7 @@ img_size = 256
 ## load dataset
 data_folder = output_folder+'/AE2-MRI-cn-6-fr-32-ks-3-bn-True-skp-False-res-False-lr-0.0001-stps-200000-bz-50-tr-65k-vl-200-test-200-n-40.0-l-correntropy'
 X_SA_trn = np.load(data_folder + '/train.npy'); X_SA_val = np.load(data_folder +'/val.npy')
-X_SA_tst = np.load(data_folder + '/tst.npy'); X_SP_tst = np.load(data_folder + '/anomaly.npy')
+X_SA_tst = np.load(data_folder + '/test.npy'); X_SP_tst = np.load(data_folder + '/anomaly.npy')
 # X_SA_trn, X_SA_val, X_SA_tst, X_SP_tst = load_anomaly_data(dataset = dataset, train = train, valid = 400, test = 400)
 # noise = 10
 # X_SA_trn, X_SA_val, X_SA_tst, X_SP_tst = load_MRI_true_data(docker = docker, train = train, val = val, normal = test, anomaly = test, noise = noise)
