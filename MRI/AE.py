@@ -281,7 +281,7 @@ plot_hist_pixels(model_folder+'/hist_mean_pixel.png'.format(model_name), img_mea
 loss_trn_list, loss_val_list, loss_norm_list, loss_anomaly_list, auc_list =[],[],[],[],[]
 
 # nb_steps = 5000
-best_val_err = np.inf
+best_loss_val = np.inf
 # sess = tf.Session()
 with tf.Session() as sess:
 	tf.global_variables_initializer().run(session=sess)
