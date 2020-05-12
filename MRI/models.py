@@ -90,3 +90,15 @@ def auto_encoder2(x, nb_cnn = 4, bn = False, filters = 32, kernel_size = [5,5], 
 					kernel_initializer= 'truncated_normal', kernel_regularizer=l2_regularizer)
 		y = tf.nn.relu(y)
 	return h1, h2, y
+
+def auto_encoder_stack(x, nb_cnn1 = 2, nb_cnn2 = 4, bn = False, filters = 32, kernel_size = [5,5], scope_name = 'base', reuse = False):
+	with tf.variable_scope(scope_name, reuse = reuse):
+		h1, h2, y1 = auto_encoder(x, nb_cnn = nb_cnn1, bn = False, filters = 32, kernel_size = [5,5], scope_name = 'block1', reuse = False)
+		h1, h2, y2 = auto_encoder(x, nb_cnn = nb_cnn2, bn = False, filters = 32, kernel_size = [5,5], scope_name = 'block2', reuse = False)
+	return y1, y2
+
+def auto_encoder_stack2(x, nb_cnn1 = 2, nb_cnn2 = 4, bn = False, filters = 32, kernel_size = [5,5], scope_name = 'base', reuse = False):
+	with tf.variable_scope(scope_name, reuse = reuse):
+		h1, h2, y1 = auto_encoder2(x, nb_cnn = nb_cnn1, bn = False, filters = 32, kernel_size = [5,5], scope_name = 'block1', reuse = False)
+		h1, h2, y2 = auto_encoder2(x, nb_cnn = nb_cnn2, bn = False, filters = 32, kernel_size = [5,5], scope_name = 'block2', reuse = False)
+	return y1, y2
