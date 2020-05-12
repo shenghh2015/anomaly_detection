@@ -238,8 +238,8 @@ X_SA_trn, X_SA_val, X_SA_tst, X_SP_tst = load_MRI_true_data(docker = docker, tra
 print_red('Data 0-1 normalization ...')
 X_SA_trn, X_SA_val, X_SA_tst, X_SP_tst = normalize_0_1(X_SA_trn), normalize_0_1(X_SA_val), normalize_0_1(X_SA_tst), normalize_0_1(X_SP_tst)
 ## Dimension adjust
-X_SA_trn, X_SA_val, X_SA_tst, X_SP_tst, Xt = np.expand_dims(X_SA_trn, axis = 3), np.expand_dims(X_SA_val, axis = 3), np.expand_dims(X_SA_tst, axis = 3),\
-		 np.expand_dims(X_SP_tst, axis = 3), np.expand_dims(Xt, axis = 3)
+X_SA_trn, X_SA_val, X_SA_tst, X_SP_tst = np.expand_dims(X_SA_trn, axis = 3), np.expand_dims(X_SA_val, axis = 3), np.expand_dims(X_SA_tst, axis = 3),\
+		 np.expand_dims(X_SP_tst, axis = 3)
 print_red('Data ready!')
 
 # create the graph
@@ -271,7 +271,8 @@ err_mean = tf.reduce_mean(err_map, [1,2,3]); cost = tf.reduce_mean(err_mean)
 trn_step = tf.train.AdamOptimizer(lr).minimize(cost, var_list= vars_list)
 
 # save the results for the methods by use of mean of pixels
-Xt = np.concatenate([X_SA_tst, X_SP_tst], axis = 0); img_means = np.squeeze(np.apply_over_axes(np.mean, Xt, axes = [1,2,3]))
+Xt = np.expand_dims(np.concatenate([X_SA_tst, X_SP_tst], axis = 0), axis = 3)
+img_means = np.squeeze(np.apply_over_axes(np.mean, Xt, axes = [1,2,3]))
 yt = np.concatenate([np.zeros((len(X_SA_tst),1)), np.ones((len(X_SP_tst),1))], axis = 0).flatten(); MP_auc = roc_auc_score(yt, img_means)
 np.savetxt(os.path.join(model_folder,'MP_stat.txt'), img_means)
 plot_hist_pixels(model_folder+'/hist_mean_pixel.png'.format(model_name), img_means[:int(len(img_means)/2)], img_means[int(len(img_means)/2):])
