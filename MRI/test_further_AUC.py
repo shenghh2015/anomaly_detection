@@ -202,14 +202,14 @@ gpu = 0; docker = True
 os.environ["CUDA_VISIBLE_DEVICES"] = str(gpu)
 
 if docker:
-	output_folder = '/data/results/MRI/MRI_AE'
+	output_folder = '/data/results/MRI/'
 else:
 	output_folder = './data/MRI'
 
 #model_name = 'AE2-MRI-cn-4-fr-32-ks-3-bn-True-skp-False-res-False-lr-0.0001-stps-200000-bz-50-tr-65k-vl-200-test-200-n-0.0'
 #model_name = 'AE2-MRI-cn-4-fr-32-ks-3-bn-True-skp-False-res-False-lr-0.0001-stps-200000-bz-50-tr-65k-vl-200-test-200-n-40.0'
 # model_name = 'AE1-MRI-cn-4-fr-32-ks-5-bn-True-skp-False-res-False-lr-0.0001-stps-300000-bz-50-tr-65k-vl-200-test-200-n-50.0'
-model_name = 'AE2-MRI-cn-6-fr-32-ks-3-bn-True-skp-False-res-False-lr-0.0001-stps-200000-bz-50-tr-65k-vl-200-test-200-n-40.0-l-correntropy'
+model_name = 'f-AE2-MRI-cn-4-fr-32-ks-3-bn-True-skp-False-res-False-lr-0.0001-stps-200000-bz-50-tr-65k-vl-200-test-200-n-20.0-l-mse'
 splits = model_name.split('-')
 if len(splits[0])<=2:
 	version =1
@@ -230,11 +230,17 @@ for i in range(len(splits)):
 		test = int(splits[i+1])
 	elif splits[i] == 'n':
 		noise = float(splits[i+1])
+	elif splits[i] == 'l':
+		loss = splits[i+1]
 
 model_folder = os.path.join(output_folder, model_name)
 
-X_SA_trn, X_SA_val, X_SA_tst, X_SP_tst = load_MRI_true_data(docker = docker, train = train, val = val, normal = test, anomaly = test, noise = noise)
-X_SA_trn, X_SA_val, X_SA_tst, X_SP_tst = normalize_0_1(X_SA_trn), normalize_0_1(X_SA_val), normalize_0_1(X_SA_tst), normalize_0_1(X_SP_tst)
+data_folder = output_folder+'/AE2-MRI-cn-6-fr-32-ks-3-bn-True-skp-False-res-False-lr-0.0001-stps-200000-bz-50-tr-65k-vl-200-test-200-n-40.0-l-correntropy'
+X_SA_trn = np.load(data_folder + '/train.npy'); X_SA_val = np.load(data_folder +'/val.npy')
+X_SA_tst = np.load(data_folder + '/test.npy'); X_SP_tst = np.load(data_folder + '/anomaly.npy')
+
+# X_SA_trn, X_SA_val, X_SA_tst, X_SP_tst = load_MRI_true_data(docker = docker, train = train, val = val, normal = test, anomaly = test, noise = noise)
+# X_SA_trn, X_SA_val, X_SA_tst, X_SP_tst = normalize_0_1(X_SA_trn), normalize_0_1(X_SA_val), normalize_0_1(X_SA_tst), normalize_0_1(X_SP_tst)
 # padding into 128x128 pixels
 # X_SA_trn, X_SA_val, X_SA_tst, X_SP_tst = pad_128(X_SA_trn), pad_128(X_SA_val), pad_128(X_SA_tst), pad_128(X_SP_tst)
 
@@ -243,8 +249,8 @@ Xt = np.concatenate([X_SA_tst, X_SP_tst], axis = 0)
 yt = np.concatenate([np.zeros((len(X_SA_tst),1)), np.ones((len(X_SP_tst),1))], axis = 0).flatten()
 
 ## Dimension adjust
-X_SA_trn, X_SA_val, X_SA_tst, X_SP_tst, Xt = np.expand_dims(X_SA_trn, axis = 3), np.expand_dims(X_SA_val, axis = 3), np.expand_dims(X_SA_tst, axis = 3),\
-		 np.expand_dims(X_SP_tst, axis = 3), np.expand_dims(Xt, axis = 3)
+# X_SA_trn, X_SA_val, X_SA_tst, X_SP_tst, Xt = np.expand_dims(X_SA_trn, axis = 3), np.expand_dims(X_SA_val, axis = 3), np.expand_dims(X_SA_tst, axis = 3),\
+# 		 np.expand_dims(X_SP_tst, axis = 3), np.expand_dims(Xt, axis = 3)
 
 #nb_cnn = 4; 
 batch_norm = True 
