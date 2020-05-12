@@ -32,7 +32,7 @@ def normalize_0_1(data):
 	return data[~np.isnan(image_sum),:]
 
 def pad_128(data):
-	return np.pad(data, ((0,0),(10,9),(10,9)), 'constant')
+	return np.pad(data, ((0,0),(10,9),(10,9)), 'mean')
 
 def print_yellow(str):
 	from termcolor import colored 
@@ -190,12 +190,13 @@ parser.add_argument("--res", type=str2bool, default = False)
 parser.add_argument("--lr", type=float, default = 1e-5)
 parser.add_argument("--step", type=int, default = 1000)
 parser.add_argument("--bz", type=int, default = 50)
-parser.add_argument("--dataset", type=str, default = 'dense')
+parser.add_argument("--dataset", type = str, default = 'dense')
 parser.add_argument("--train", type=int, default = 65000)
 parser.add_argument("--val", type=int, default = 200)
 parser.add_argument("--test", type=int, default = 200)
-parser.add_argument("--noise", type=float, default = 0)
+# parser.add_argument("--noise", type=float, default = 0)
 parser.add_argument("--version", type=int, default = 1)
+parser.add_argument("--loss", type = str, default = 'mse')
 
 args = parser.parse_args()
 print(args)
@@ -211,12 +212,13 @@ residual = args.res
 lr = args.lr
 nb_steps = args.step
 batch_size = args.bz
-dataset = args.dataset
 train = args.train
 val = args.val
 test = args.test
-noise = args.noise
+dataset = args.dataset
+# noise = args.noise
 version = args.version
+loss = args.loss
 
 os.environ["CUDA_VISIBLE_DEVICES"] = str(gpu)
 
@@ -226,117 +228,101 @@ else:
 	output_folder = './data/FDA'
 
 ## model folder
-model_name = 'FDA{}-{}-{}-cn-{}-fr-{}-ks-{}-bn-{}-skp-{}-res-{}-lr-{}-stps-{}-bz-{}-tr-{}k-vl-{}-test-{}'.format(version, dataset, os.path.basename(output_folder), nb_cnn, filters, kernel_size, batch_norm, skip, residual, lr, nb_steps, batch_size, int(train/1000), val, test)
+model_name = 'AE{}-{}-{}-cn-{}-fr-{}-ks-{}-bn-{}-skp-{}-res-{}-lr-{}-stps-{}-bz-{}-tr-{}k-vl-{}-test-{}-l-{}'.format(version, os.path.basename(output_folder), dataset, nb_cnn, filters, kernel_size, batch_norm, skip, residual, lr, nb_steps, batch_size, int(train/1000), val, test, loss)
 model_folder = os.path.join(output_folder, model_name)
 generate_folder(model_folder)
 
 #image size
 img_size = 128
 ## load dataset
-X_SA_trn, X_SA_val, X_SA_tst, X_SP_tst = load_anomaly_data(docker = docker, dataset = dataset, train = train, valid = 400, test = 400)
-# noise = 10
-# X_SA_trn, X_SA_val, X_SA_tst, X_SP_tst = load_MRI_true_data(docker = docker, train = train, val = val, normal = test, anomaly = test, noise = noise)
-# save_recon_images_1(model_folder+'/data_example_{}.png'.format(noise), X_SA_tst, X_SP_tst, fig_size = [11,5])
-# 0-1 normalization
+print_red('Data loading ...')
+X_SA_trn, X_SA_val, X_SA_tst, X_SP_tst = load_anomaly_data(docker = docker, dataset = dataset, train = train, valid = val, test = test)
+print_red('Data 0-1 normalization ...')
 X_SA_trn, X_SA_val, X_SA_tst, X_SP_tst = normalize_0_1(X_SA_trn), normalize_0_1(X_SA_val), normalize_0_1(X_SA_tst), normalize_0_1(X_SP_tst)
-# padding into 128x128 pixels
 X_SA_trn, X_SA_val, X_SA_tst, X_SP_tst = pad_128(X_SA_trn), pad_128(X_SA_val), pad_128(X_SA_tst), pad_128(X_SP_tst)
-
-## test data
-Xt = np.concatenate([X_SA_tst, X_SP_tst], axis = 0)
-yt = np.concatenate([np.zeros((len(X_SA_tst),1)), np.ones((len(X_SP_tst),1))], axis = 0).flatten()
-
 ## Dimension adjust
-X_SA_trn, X_SA_val, X_SA_tst, X_SP_tst, Xt = np.expand_dims(X_SA_trn, axis = 3), np.expand_dims(X_SA_val, axis = 3), np.expand_dims(X_SA_tst, axis = 3),\
-		 np.expand_dims(X_SP_tst, axis = 3), np.expand_dims(Xt, axis = 3)
+X_SA_trn, X_SA_val, X_SA_tst, X_SP_tst = np.expand_dims(X_SA_trn, axis = 3), np.expand_dims(X_SA_val, axis = 3), np.expand_dims(X_SA_tst, axis = 3),\
+		 np.expand_dims(X_SP_tst, axis = 3)
+print_red('Data ready!')
 
 # create the graph
 scope = 'base'
-x = tf.placeholder("float", shape=[None, 128, 128, 1])
+x = tf.placeholder("float", shape=[None, img_size, img_size, 1])
 if version == 1 or version ==2:
 	h1, h2, y = auto_encoder(x, nb_cnn = nb_cnn, bn = batch_norm, filters = filters, kernel_size = [kernel_size, kernel_size], scope_name = scope)
 elif version == 3:
 	h1, h2, y = auto_encoder2(x, nb_cnn = nb_cnn, bn = batch_norm, filters = filters, kernel_size = [kernel_size, kernel_size], scope_name = scope)
 
-sqr_err = tf.square(y - x)
-cost = tf.reduce_mean(sqr_err)
-
 # create a saver
-vars_list = tf.trainable_variables(scope)
-key_list = [v.name[:-2] for v in tf.trainable_variables(scope)]
-key_direct = {}
+key_direct = {}; vars_list = tf.trainable_variables(scope); key_list = [v.name[:-2] for v in tf.trainable_variables(scope)]
 for key, var in zip(key_list, vars_list):
 	key_direct[key] = var
 saver = tf.train.Saver(key_direct, max_to_keep=nb_steps)
-
-# print out trainable parameters
 for v in key_list:
 	print_green(v)
 
+if loss == 'mse':
+	err_map = tf.square(y - x) 
+elif loss == 'correntropy':
+	sigma = 0.1
+	err_map = -tf.exp(-tf.square(x - y)/sigma)
+elif loss == 'bce':
+	err_map = -x*tf.log(tf.math.sigmoid(y)) - (1-x)*tf.log(1-tf.math.sigmoid(y))
+
+# loss function
+err_mean = tf.reduce_mean(err_map, [1,2,3]); cost = tf.reduce_mean(err_mean)
 trn_step = tf.train.AdamOptimizer(lr).minimize(cost, var_list= vars_list)
 
+# save the results for the methods by use of mean of pixels
+Xt = np.expand_dims(np.concatenate([X_SA_tst, X_SP_tst], axis = 0), axis = 3)
+img_means = np.squeeze(np.apply_over_axes(np.mean, Xt, axes = [1,2,3]))
+yt = np.concatenate([np.zeros((len(X_SA_tst),1)), np.ones((len(X_SP_tst),1))], axis = 0).flatten(); MP_auc = roc_auc_score(yt, img_means)
+np.savetxt(os.path.join(model_folder,'MP_stat.txt'), img_means)
+plot_hist_pixels(model_folder+'/hist_mean_pixel.png'.format(model_name), img_means[:int(len(img_means)/2)], img_means[int(len(img_means)/2):])
+
 # training
-trn_err_list = []
-val_err_list = []
-norm_err_list = []
-anomaly_err_list = []
-auc_list = []
+loss_trn_list, loss_val_list, loss_norm_list, loss_anomaly_list, auc_list =[],[],[],[],[]
 
 # nb_steps = 5000
-best_val_err = np.inf
+best_loss_val = np.inf
 # sess = tf.Session()
 with tf.Session() as sess:
 	tf.global_variables_initializer().run(session=sess)
 	for iteration in range(nb_steps):
 		indices = np.random.randint(0, X_SA_trn.shape[0]-1, batch_size)
-		batch_x = X_SA_trn[indices,:]
-		sess.run(trn_step, feed_dict={x: batch_x})
+		# train with batches
+		batch_x = X_SA_trn[indices,:]; sess.run(trn_step, feed_dict={x: batch_x})
 		if iteration%100 == 0:
-			trn_err = cost.eval(session = sess, feed_dict = {x:batch_x})
-			val_err = cost.eval(session = sess, feed_dict = {x:X_SA_val})
-			tst_SA_err = cost.eval(session = sess, feed_dict = {x:X_SA_tst})
-			tst_SP_err = cost.eval(session = sess, feed_dict = {x:X_SP_tst})
-			y_recon = y.eval(session = sess, feed_dict = {x:Xt})			
-			tst_pixel_errs = sqr_err.eval(session = sess, feed_dict = {x:Xt})
-			max_val, min_val = np.max(tst_pixel_errs), np.min(tst_pixel_errs)
-			tst_pixel_errs1 = []
-			for i in range(tst_pixel_errs.shape[0]):
-				err = tst_pixel_errs[i,:]; err = (err -np.min(err))/(np.max(err)-np.min(err))*(max_val -min_val)+min_val 
-				tst_pixel_errs1.append(err.reshape(1,128,128,1))
-			tst_pixel_errs = np.concatenate(tst_pixel_errs1)
-			img_means = np.squeeze(np.apply_over_axes(np.mean, Xt, axes = [1,2,3]))
-			tst_img_errs = np.squeeze(np.apply_over_axes(np.mean, tst_pixel_errs, axes = [1,2,3]))
-			test_auc = roc_auc_score(yt, tst_img_errs)
-			mean_auc = roc_auc_score(yt, img_means)
+			loss_trn = cost.eval(session = sess, feed_dict = {x:batch_x})
+			loss_val = cost.eval(session = sess, feed_dict = {x:X_SA_val})
+			loss_norm = cost.eval(session = sess, feed_dict = {x:X_SA_tst})
+			loss_anomaly = cost.eval(session = sess, feed_dict = {x:X_SP_tst})
+			# reconstructed images
+			Yn = y.eval(session = sess, feed_dict = {x: X_SA_tst}); Ya = y.eval(session = sess, feed_dict = {x: X_SP_tst})
+			y_recon = np.concatenate([Yn, Ya], axis = 0)
+			# reconstruction errors-based detection
+			norm_err_map = err_map.eval(session = sess, feed_dict = {x: X_SA_tst}); anomaly_err_map = err_map.eval(session = sess, feed_dict = {x: X_SP_tst})
+			recon_err_map = np.concatenate([norm_err_map, anomaly_err_map], axis = 0)
+			recon_errs = np.apply_over_axes(np.mean, recon_err_map, [1,2,3]).flatten(); AE_auc = roc_auc_score(yt, recon_errs)
+			# print out results
 			print_block(symbol = '-', nb_sybl = 50)
-			print_yellow('RE: train {0:.4f}, val {1:.4f}, normal {2:.4f}, abnormal {3:.4f}; AUC: AE {4:.4f} M: {5:.4f}; iter {6:}'.\
-					format(trn_err, val_err, tst_SA_err, tst_SP_err, test_auc, mean_auc, iteration))
 			print(model_name)
+			print_yellow('LOSS: T {0:.4f}, V {1:.4f}, Norm {2:.4f}, Anomaly {3:.4f}; AUC: AE {4:.4f}, M: {5:.4f}; iter {6:}'.\
+					format(loss_trn, loss_val, loss_norm, loss_anomaly, AE_auc, MP_auc, iteration))
 			# save model
 			saver.save(sess, model_folder +'/model', global_step= iteration)
 			# save results
-			trn_err_list, val_err_list, norm_err_list, anomaly_err_list, auc_list =\
-				np.append(trn_err_list, trn_err), np.append(val_err_list, val_err),\
-					np.append(norm_err_list, tst_SA_err), np.append(anomaly_err_list, tst_SP_err), np.append(auc_list, test_auc)
-			np.savetxt(os.path.join(model_folder,'train_loss.txt'), trn_err_list)
-			np.savetxt(os.path.join(model_folder,'val_loss.txt'), val_err_list)
-			np.savetxt(os.path.join(model_folder,'norm_loss.txt'), norm_err_list)
-			np.savetxt(os.path.join(model_folder,'anomaly_loss.txt'),anomaly_err_list)
-			np.savetxt(os.path.join(model_folder,'test_auc.txt'),auc_list)
-			loss_file = os.path.join(model_folder,'loss-{}.png'.format(model_name))
-			plot_LOSS(loss_file, 0, trn_err_list, val_err_list, norm_err_list, anomaly_err_list)
-			auc_file = os.path.join(model_folder,'auc-{}.png'.format(model_name))
-			plot_AUC(auc_file, auc_list)
-			if best_val_err > val_err:
-				best_val_err = val_err
-				np.savetxt(os.path.join(model_folder,'AE_stat.txt'), tst_img_errs)
-				np.savetxt(os.path.join(model_folder,'Pixel_mean_stat.txt'), img_means)
-				np.savetxt(os.path.join(model_folder,'best_auc.txt'),[test_auc, mean_auc])
-				hist_file = os.path.join(model_folder,'hist-{}.png'.format(model_name))
-				plot_hist(hist_file, tst_img_errs[:int(len(tst_img_errs)/2)], tst_img_errs[int(len(tst_img_errs)/2):])
-				plot_hist_pixels(model_folder+'/hist_mean_pixel.png'.format(model_name), img_means[:int(len(img_means)/2)], img_means[int(len(img_means)/2):])
-				saver.save(sess, model_folder +'/best')
-				print_red('update best: {}'.format(model_name))
-				# save reconstructed images
-				img_file_name = os.path.join(model_folder,'recon-{}.png'.format(model_name))
-				save_recon_images(img_file_name, Xt, y_recon, tst_pixel_errs, fig_size = [11,5])
+			loss_trn_list, loss_val_list, loss_norm_list, loss_anomaly_list, auc_list =\
+				np.append(loss_trn_list, loss_trn), np.append(loss_val_list, loss_val),\
+					np.append(loss_norm_list, loss_norm), np.append(loss_anomaly_list, loss_anomaly), np.append(auc_list, AE_auc)
+			np.savetxt(model_folder+'/train_loss.txt', loss_trn_list); np.savetxt(model_folder+'/val_loss.txt', loss_val_list)
+			np.savetxt(model_folder+'/norm_loss.txt', loss_norm_list); np.savetxt(model_folder+'/anomaly_loss.txt',loss_anomaly_list)
+			plot_LOSS(model_folder+'/loss-{}.png'.format(model_name), 0, loss_trn_list, loss_val_list, loss_norm_list, loss_anomaly_list)
+			np.savetxt(model_folder+'/AE_auc.txt', auc_list); plot_AUC(model_folder+'/auc-{}.png'.format(model_name), auc_list)
+
+			if best_loss_val > loss_val:
+				best_loss_val = loss_val
+				saver.save(sess, model_folder +'/best'); print_red('update best:{}'.format(model_name))
+				np.savetxt(model_folder+'/AE_stat.txt', recon_errs); np.savetxt(model_folder+'/best_auc.txt',[AE_auc, MP_auc])
+				plot_hist(model_folder+'/hist-{}.png'.format(model_name), recon_errs[:int(len(recon_errs)/2)], recon_errs[int(len(recon_errs)/2):])
+				save_recon_images(model_folder+'/recon-{}.png'.format(model_name), Xt, y_recon, recon_err_map, fig_size = [11,5])
