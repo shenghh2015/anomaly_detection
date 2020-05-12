@@ -298,7 +298,7 @@ with tf.Session() as sess:
 			Yn = y.eval(session = sess, feed_dict = {x: X_SA_tst}); Ya = y.eval(session = sess, feed_dict = {x: X_SP_tst})
 			y_recon = np.concatenate([Yn, Ya], axis = 0)
 			# reconstruction errors-based detection
-			norm_err_map = sqr_err.eval(session = sess, feed_dict = {x: X_SA_tst}); anomaly_err_map = sqr_err.eval(session = sess, feed_dict = {x: X_SP_tst})
+			norm_err_map = err_map.eval(session = sess, feed_dict = {x: X_SA_tst}); anomaly_err_map = err_map.eval(session = sess, feed_dict = {x: X_SP_tst})
 			recon_err_map = np.concatenate([norm_err_map, anomaly_err_map], axis = 0)
 			recon_errs = np.apply_over_axes(np.mean, recon_err_map, [1,2,3]).flatten(); AE_auc = roc_auc_score(yt, recon_errs)
 			# print out results
