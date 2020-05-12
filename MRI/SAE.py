@@ -181,7 +181,8 @@ def generate_folder(folder):
 parser = argparse.ArgumentParser()
 parser.add_argument("--gpu", type=int, default = 1)
 parser.add_argument("--docker", type = str2bool, default = True)
-parser.add_argument("--cn", type=int, default = 4)
+parser.add_argument("--cn1", type=int, default = 4)
+parser.add_argument("--cn2", type=int, default = 4)
 parser.add_argument("--fr", type=int, default = 32)
 parser.add_argument("--ks", type=int, default = 5)
 parser.add_argument("--bn", type=str2bool, default = True)
@@ -190,19 +191,21 @@ parser.add_argument("--res", type=str2bool, default = False)
 parser.add_argument("--lr", type=float, default = 1e-5)
 parser.add_argument("--step", type=int, default = 1000)
 parser.add_argument("--bz", type=int, default = 50)
-parser.add_argument("--train", type=int, default = 65000)
+parser.add_argument("--train", type=int, default = 20000)
 parser.add_argument("--val", type=int, default = 200)
 parser.add_argument("--test", type=int, default = 200)
 parser.add_argument("--noise", type=float, default = 0)
-parser.add_argument("--version", type=int, default = 1)
-parser.add_argument("--loss", type = str, default = 'mse')
+parser.add_argument("--version", type=int, default = 2)
+parser.add_argument("--loss1", type = str, default = 'mse')
+parser.add_argument("--loss2", type = str, default = 'mse')
 
 args = parser.parse_args()
 print(args)
 
 gpu = args.gpu
 docker = args.docker
-nb_cnn = args.cn
+nb_cnn1 = args.cn1
+nb_cnn2 = args.cn2
 filters = args.fr
 kernel_size = args.ks
 batch_norm = args.bn
@@ -216,7 +219,8 @@ val = args.val
 test = args.test
 noise = args.noise
 version = args.version
-loss = args.loss
+loss1 = args.loss1
+loss2 = args.loss2
 
 os.environ["CUDA_VISIBLE_DEVICES"] = str(gpu)
 
@@ -226,7 +230,7 @@ else:
 	output_folder = './data/MRI'
 
 ## model folder
-model_name = 'AE{}-{}-cn-{}-fr-{}-ks-{}-bn-{}-skp-{}-res-{}-lr-{}-stps-{}-bz-{}-tr-{}k-vl-{}-test-{}-n-{}-l-{}'.format(version, os.path.basename(output_folder), nb_cnn, filters, kernel_size, batch_norm, skip, residual, lr, nb_steps, batch_size, int(train/1000), val, test,noise, loss)
+model_name = 'AE{}-{}-cn-{}-{}-fr-{}-ks-{}-bn-{}-skp-{}-res-{}-lr-{}-stps-{}-bz-{}-tr-{}k-vl-{}-test-{}-n-{}-l-{}-{}'.format(version, os.path.basename(output_folder), nb_cnn1, nb_cnn2, filters, kernel_size, batch_norm, skip, residual, lr, nb_steps, batch_size, int(train/1000), val, test,noise, loss1, loss2)
 model_folder = os.path.join(output_folder, model_name)
 generate_folder(model_folder)
 
@@ -248,7 +252,7 @@ x = tf.placeholder("float", shape=[None, img_size, img_size, 1])
 if version == 1:
 	y1, y2 = auto_encoder_stack(x, nb_cnn1 = nb_cnn1, nb_cnn2 = nb_cnn2, bn = batch_norm, filters = filters, kernel_size = [kernel_size, kernel_size], scope_name = scope)
 elif version == 2:
-	y1, y2 = auto_encoder2(x, nb_cnn1 = nb_cnn1, nb_cnn2 = nb_cnn2, nb_cnn = nb_cnn, bn = batch_norm, filters = filters, kernel_size = [kernel_size, kernel_size], scope_name = scope)
+	y1, y2 = auto_encoder_stack2(x, nb_cnn1 = nb_cnn1, nb_cnn2 = nb_cnn2, bn = batch_norm, filters = filters, kernel_size = [kernel_size, kernel_size], scope_name = scope)
 
 # create a saver
 key_direct = {}; vars_list = tf.trainable_variables(scope); key_list = [v.name[:-2] for v in tf.trainable_variables(scope)]
@@ -259,7 +263,7 @@ for v in key_list:
 	print_green(v)
 
 # variables for autoencoder1
-vars_list1 = tf.trainable_variables(scope+'/stack1'); vars_list2 = tf.trainable_variables(scope+'/stack2')
+vars_list1 = tf.trainable_variables(scope+'/block1'); vars_list2 = tf.trainable_variables(scope+'/block2')
 
 if loss1 == 'mse':
 	err_map1 = tf.square(y1 - x)
@@ -312,7 +316,7 @@ with tf.Session() as sess:
 			# reconstructed images
 			Yn1 = y1.eval(session = sess, feed_dict = {x: X_SA_tst}); Ya1 = y1.eval(session = sess, feed_dict = {x: X_SP_tst})
 			y_recon1 = np.concatenate([Yn1, Ya1], axis = 0)
-			Yn2 = y2.eval(session = sess, feed_dict = {x: X_SA_tst}); Ya1 = y1.eval(session = sess, feed_dict = {x: X_SP_tst})
+			Yn2 = y2.eval(session = sess, feed_dict = {x: X_SA_tst}); Ya2 = y2.eval(session = sess, feed_dict = {x: X_SP_tst})
 			y_recon2 = np.concatenate([Yn2, Ya2], axis = 0)
 			# reconstruction errors-based detection
 			norm_err_map1 = err_map1.eval(session = sess, feed_dict = {x: X_SA_tst}); anomaly_err_map1 = err_map1.eval(session = sess, feed_dict = {x: X_SP_tst})
