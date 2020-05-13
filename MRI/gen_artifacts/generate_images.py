@@ -16,6 +16,8 @@ args = parser.parse_args()
 print(args)
 
 us_factor = args.us_factor
+if us_factor == 1 or us_factor == 2 or us_factor == 4:
+	us_factor = int(us_factor)
 noise_level = args.noise_level
 docker = True
 # Load the array of images and select a single slice as ground truth f
@@ -23,12 +25,13 @@ dim = 256 # Image dimensions: dimxdim
 dataset_folder = '/data/datasets/MRI'
 mask_folder = dataset_folder + '/anomaly_detection_scripts'
 images = np.load(dataset_folder + '/axial_batch2_256x256.npy')
-mask_base = np.fromfile(mask_folder +'/mask_{}_fold_cartesian.dat'.format(us_factor), np.int32)
-mask_base = mask.reshape(dim,dim)
+if not us_factor == 1:
+	mask_base = np.fromfile(mask_folder +'/mask_{}_fold_cartesian.dat'.format(us_factor), np.int32)
+	mask_base = mask.reshape(dim,dim)
 f_MP_list = []
 for i in range(images.shape[0]):	
 	# Load the undersampling mask
-	mask = fft.ifftshift(mask_base) # Since FFT is not centered we can shift the mask itself
+#	mask = fft.ifftshift(mask_base) # Since FFT is not centered we can shift the mask itself
 # 	plt.clf()
 # 	plt.figure(1); plt.imshow(mask,cmap='gray'); plt.title('Undersampling mask')
 # 	plt.show()
@@ -46,6 +49,7 @@ for i in range(images.shape[0]):
 	if us_factor == 1:
 		g = g + z
 	else:
+		mask = fft.ifftshift(mask_base)
 		g = mask * g + z
 	f_MP = fft.ifft2(g); f_MP = np.real(f_MP)
 	f_MP_list.append(f_MP)
