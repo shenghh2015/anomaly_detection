@@ -27,7 +27,7 @@ mask_folder = dataset_folder + '/anomaly_detection_scripts'
 images = np.load(dataset_folder + '/axial_batch2_256x256.npy')
 if not us_factor == 1:
 	mask_base = np.fromfile(mask_folder +'/mask_{}_fold_cartesian.dat'.format(us_factor), np.int32)
-	mask_base = mask.reshape(dim,dim)
+	mask_base = mask_base.reshape(dim,dim)
 f_MP_list = []
 for i in range(images.shape[0]):	
 	# Load the undersampling mask
