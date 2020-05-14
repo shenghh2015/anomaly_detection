@@ -42,7 +42,7 @@ def load_MRI_data(docker = False, train = 65000, val = 600, normal = 1000, anoma
 		img = np.load(os.path.join(dataset_folder, 'axial_batch2_256x256_artifact-{}_noise-{}.npy'.format(1, noise_level)))
 	if noise_level == 0 and us_factor == 4:
 		img_MP =  np.load(os.path.join(dataset_folder, 'axial_batch2_256x256_artifact.npy'))
-	elif noise_level == 10 and us_factor == 4
+	elif noise_level == 10 and us_factor == 4:
 		img_MP =  np.load(os.path.join(dataset_folder, 'axial_batch2_256x256_artifact_noisy.npy'))
 	else:
 		img_MP =  np.load(os.path.join(dataset_folder, 'axial_batch2_256x256_artifact-{}_noise-{}.npy'.format(us_factor, noise_level)))
