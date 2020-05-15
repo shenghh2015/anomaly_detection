@@ -13,7 +13,8 @@ import scipy.io
 import scipy.misc as misc
 
 from load_data import *
-from models import *
+# from models import *
+from models2 import auto_encoder
 
 ## functions
 def str2bool(value):
