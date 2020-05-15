@@ -251,7 +251,7 @@ x = tf.placeholder("float", shape=[None, img_size, img_size, 1])
 is_training = tf.placeholder_with_default(False, (), 'is_training')
 
 if version == 1 or version ==2:
-	auto_encoder(x, nb_cnn = nb_cnn, bn = batch_norm, bn_training = is_training, filters = filters, kernel_size = [kernel_size, kernel_size], scope_name = scope)
+	h1, h2, y = auto_encoder(x, nb_cnn = nb_cnn, bn = batch_norm, bn_training = is_training, filters = filters, kernel_size = [kernel_size, kernel_size], scope_name = scope)
 elif version == 3:
 	h1, h2, y = auto_encoder2(x, nb_cnn = nb_cnn, bn = batch_norm, filters = filters, kernel_size = [kernel_size, kernel_size], scope_name = scope)
 
