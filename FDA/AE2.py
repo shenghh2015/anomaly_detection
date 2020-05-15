@@ -13,7 +13,7 @@ import scipy.io
 import scipy.misc as misc
 
 from load_data import *
-from models import *
+from models2 import auto_encoder
 
 ## functions
 def str2bool(value):
@@ -181,8 +181,7 @@ def generate_folder(folder):
 parser = argparse.ArgumentParser()
 parser.add_argument("--gpu", type=int, default = 1)
 parser.add_argument("--docker", type = str2bool, default = True)
-parser.add_argument("--cn1", type=int, default = 4)
-parser.add_argument("--cn2", type=int, default = 4)
+parser.add_argument("--cn", type=int, default = 4)
 parser.add_argument("--fr", type=int, default = 32)
 parser.add_argument("--ks", type=int, default = 5)
 parser.add_argument("--bn", type=str2bool, default = True)
@@ -191,22 +190,20 @@ parser.add_argument("--res", type=str2bool, default = False)
 parser.add_argument("--lr", type=float, default = 1e-5)
 parser.add_argument("--step", type=int, default = 1000)
 parser.add_argument("--bz", type=int, default = 50)
-parser.add_argument("--dataset", type=str, default = 'dense')
-parser.add_argument("--train", type=int, default = 20000)
+parser.add_argument("--dataset", type = str, default = 'dense')
+parser.add_argument("--train", type=int, default = 65000)
 parser.add_argument("--val", type=int, default = 200)
 parser.add_argument("--test", type=int, default = 200)
-parser.add_argument("--noise", type=float, default = 0)
-parser.add_argument("--version", type=int, default = 2)
-parser.add_argument("--loss1", type = str, default = 'mse')
-parser.add_argument("--loss2", type = str, default = 'mse')
+# parser.add_argument("--noise", type=float, default = 0)
+parser.add_argument("--version", type=int, default = 1)
+parser.add_argument("--loss", type = str, default = 'mse')
 
 args = parser.parse_args()
 print(args)
 
 gpu = args.gpu
 docker = args.docker
-nb_cnn1 = args.cn1
-nb_cnn2 = args.cn2
+nb_cnn = args.cn
 filters = args.fr
 kernel_size = args.ks
 batch_norm = args.bn
@@ -215,14 +212,13 @@ residual = args.res
 lr = args.lr
 nb_steps = args.step
 batch_size = args.bz
-dataset = args.dataset
 train = args.train
 val = args.val
 test = args.test
-noise = args.noise
+dataset = args.dataset
+# noise = args.noise
 version = args.version
-loss1 = args.loss1
-loss2 = args.loss2
+loss = args.loss
 
 os.environ["CUDA_VISIBLE_DEVICES"] = str(gpu)
 
@@ -232,7 +228,7 @@ else:
 	output_folder = './data/FDA'
 
 ## model folder
-model_name = 'AE{}-{}-{}-cn-{}-{}-fr-{}-ks-{}-bn-{}-skp-{}-res-{}-lr-{}-stps-{}-bz-{}-tr-{}k-vl-{}-test-{}-l-{}-{}'.format(version, os.path.basename(output_folder), dataset, nb_cnn1, nb_cnn2, filters, kernel_size, batch_norm, skip, residual, lr, nb_steps, batch_size, int(train/1000), val, test, loss1, loss2)
+model_name = 'AE{}-{}-{}-cn-{}-fr-{}-ks-{}-bn-{}-skp-{}-res-{}-lr-{}-stps-{}-bz-{}-tr-{}k-vl-{}-test-{}-l-{}-v2'.format(version, os.path.basename(output_folder), dataset, nb_cnn, filters, kernel_size, batch_norm, skip, residual, lr, nb_steps, batch_size, int(train/1000), val, test, loss)
 model_folder = os.path.join(output_folder, model_name)
 generate_folder(model_folder)
 
@@ -252,38 +248,32 @@ print_red('Data ready!')
 # create the graph
 scope = 'base'
 x = tf.placeholder("float", shape=[None, img_size, img_size, 1])
-if version == 1:
-	y1, y2 = auto_encoder_stack(x, nb_cnn1 = nb_cnn1, nb_cnn2 = nb_cnn2, bn = batch_norm, filters = filters, kernel_size = [kernel_size, kernel_size], scope_name = scope)
-elif version == 2:
-	y1, y2 = auto_encoder_stack2(x, nb_cnn1 = nb_cnn1, nb_cnn2 = nb_cnn2, bn = batch_norm, filters = filters, kernel_size = [kernel_size, kernel_size], scope_name = scope)
+is_training = tf.placeholder_with_default(False, (), 'is_training')
+
+if version == 1 or version ==2:
+	auto_encoder(x, nb_cnn = nb_cnn, bn = batch_norm, bn_training = is_training, filters = filters, kernel_size = [kernel_size, kernel_size], scope_name = scope)
+elif version == 3:
+	h1, h2, y = auto_encoder2(x, nb_cnn = nb_cnn, bn = batch_norm, filters = filters, kernel_size = [kernel_size, kernel_size], scope_name = scope)
 
 # create a saver
-key_direct = {}; vars_list = tf.trainable_variables(scope); key_list = [v.name[:-2] for v in tf.trainable_variables(scope)]
+key_direct = {}; vars_list = tf.global_variables(scope); key_list = [v.name[:-2] for v in tf.global_variables(scope)]
 for key, var in zip(key_list, vars_list):
 	key_direct[key] = var
 saver = tf.train.Saver(key_direct, max_to_keep=nb_steps)
 for v in key_list:
 	print_green(v)
 
-# variables for autoencoder1
-vars_list1 = tf.trainable_variables(scope+'/block1'); vars_list2 = tf.trainable_variables(scope+'/block2')
-
-if loss1 == 'mse':
-	err_map1 = tf.square(y1 - x)
-elif loss1 == 'correntropy':
+if loss == 'mse':
+	err_map = tf.square(y - x) 
+elif loss == 'correntropy':
 	sigma = 0.1
-	err_map1 = -tf.exp(-tf.square(x - y1)/sigma)
+	err_map = -tf.exp(-tf.square(x - y)/sigma)
+elif loss == 'bce':
+	err_map = -x*tf.log(tf.math.sigmoid(y)) - (1-x)*tf.log(1-tf.math.sigmoid(y))
 
-if loss2 == 'mse':
-	err_map2 = tf.square(y1 - y2)
-elif loss2 == 'correntropy':
-	sigma = 0.1
-	err_map2 = -tf.exp(-tf.square(y2 - y1)/sigma)
 # loss function
-err_mean1 = tf.reduce_mean(err_map1, [1,2,3]); cost1 = tf.reduce_mean(err_mean1)
-err_mean2 = tf.reduce_mean(err_map2, [1,2,3]); cost2 = tf.reduce_mean(err_mean2)
-trn_step1 = tf.train.AdamOptimizer(lr).minimize(cost1, var_list= vars_list1)
-trn_step2 = tf.train.AdamOptimizer(lr).minimize(cost2, var_list= vars_list2)
+err_mean = tf.reduce_mean(err_map, [1,2,3]); cost = tf.reduce_mean(err_mean)
+trn_step = tf.train.AdamOptimizer(lr).minimize(cost, var_list= tf.trainable_variables(scope))
 
 # save the results for the methods by use of mean of pixels
 Xt = np.expand_dims(np.concatenate([X_SA_tst, X_SP_tst], axis = 0), axis = 3)
@@ -293,74 +283,48 @@ np.savetxt(os.path.join(model_folder,'MP_stat.txt'), img_means)
 plot_hist_pixels(model_folder+'/hist_mean_pixel.png'.format(model_name), img_means[:int(len(img_means)/2)], img_means[int(len(img_means)/2):])
 
 # training
-loss_trn_list1, loss_val_list1, loss_norm_list1, loss_anomaly_list1, auc_list1 =[],[],[],[],[]
-loss_trn_list2, loss_val_list2, loss_norm_list2, loss_anomaly_list2, auc_list2 =[],[],[],[],[]
 loss_trn_list, loss_val_list, loss_norm_list, loss_anomaly_list, auc_list =[],[],[],[],[]
 
 # nb_steps = 5000
-best_loss_val1 = np.inf
-best_loss_val2 = np.inf
+best_loss_val = np.inf
 # sess = tf.Session()
 with tf.Session() as sess:
 	tf.global_variables_initializer().run(session=sess)
 	for iteration in range(nb_steps):
 		indices = np.random.randint(0, X_SA_trn.shape[0]-1, batch_size)
 		# train with batches
-		batch_x = X_SA_trn[indices,:]; sess.run(trn_step1, feed_dict={x: batch_x}); sess.run(trn_step2, feed_dict={x: batch_x})
+		batch_x = X_SA_trn[indices,:]; sess.run(trn_step, feed_dict={x: batch_x, is_training: True})
 		if iteration%100 == 0:
-			loss_trn1 = cost1.eval(session = sess, feed_dict = {x:batch_x})
-			loss_val1 = cost1.eval(session = sess, feed_dict = {x:X_SA_val})
-			loss_norm1 = cost1.eval(session = sess, feed_dict = {x:X_SA_tst})
-			loss_anomaly1 = cost1.eval(session = sess, feed_dict = {x:X_SP_tst})
-			loss_trn2 = cost2.eval(session = sess, feed_dict = {x:batch_x})
-			loss_val2 = cost2.eval(session = sess, feed_dict = {x:X_SA_val})
-			loss_norm2 = cost2.eval(session = sess, feed_dict = {x:X_SA_tst})
-			loss_anomaly2 = cost2.eval(session = sess, feed_dict = {x:X_SP_tst})
+			loss_trn = cost.eval(session = sess, feed_dict = {x:batch_x, is_training: False})
+			loss_val = cost.eval(session = sess, feed_dict = {x:X_SA_val, is_training: False})
+			loss_norm = cost.eval(session = sess, feed_dict = {x:X_SA_tst, is_training: False})
+			loss_anomaly = cost.eval(session = sess, feed_dict = {x:X_SP_tst, is_training: False})
 			# reconstructed images
-			Yn1 = y1.eval(session = sess, feed_dict = {x: X_SA_tst}); Ya1 = y1.eval(session = sess, feed_dict = {x: X_SP_tst})
-			y_recon1 = np.concatenate([Yn1, Ya1], axis = 0)
-			Yn2 = y2.eval(session = sess, feed_dict = {x: X_SA_tst}); Ya2 = y2.eval(session = sess, feed_dict = {x: X_SP_tst})
-			y_recon2 = np.concatenate([Yn2, Ya2], axis = 0)
+			Yn = y.eval(session = sess, feed_dict = {x: X_SA_tst, is_training: False}); Ya = y.eval(session = sess, feed_dict = {x: X_SP_tst, is_training: False})
+			y_recon = np.concatenate([Yn, Ya], axis = 0)
 			# reconstruction errors-based detection
-			norm_err_map1 = err_map1.eval(session = sess, feed_dict = {x: X_SA_tst}); anomaly_err_map1 = err_map1.eval(session = sess, feed_dict = {x: X_SP_tst})
-			recon_err_map1 = np.concatenate([norm_err_map1, anomaly_err_map1], axis = 0)
-			recon_errs1 = np.apply_over_axes(np.mean, recon_err_map1, [1,2,3]).flatten(); AE_auc1 = roc_auc_score(yt, recon_errs1)
-			norm_err_map2 = err_map2.eval(session = sess, feed_dict = {x: X_SA_tst}); anomaly_err_map2 = err_map2.eval(session = sess, feed_dict = {x: X_SP_tst})
-			recon_err_map2 = np.concatenate([norm_err_map2, anomaly_err_map2], axis = 0)
-			recon_errs2 = np.apply_over_axes(np.mean, recon_err_map2, [1,2,3]).flatten(); AE_auc2 = roc_auc_score(yt, recon_errs2)
+			norm_err_map = err_map.eval(session = sess, feed_dict = {x: X_SA_tst, is_training: False}); anomaly_err_map = err_map.eval(session = sess, feed_dict = {x: X_SP_tst, is_training: False})
+			recon_err_map = np.concatenate([norm_err_map, anomaly_err_map], axis = 0)
+			recon_errs = np.apply_over_axes(np.mean, recon_err_map, [1,2,3]).flatten(); AE_auc = roc_auc_score(yt, recon_errs)
 			# print out results
 			print_block(symbol = '-', nb_sybl = 50)
 			print(model_name)
 			print_yellow('LOSS: T {0:.4f}, V {1:.4f}, Norm {2:.4f}, Anomaly {3:.4f}; AUC: AE {4:.4f}, M: {5:.4f}; iter {6:}'.\
-					format(loss_trn1, loss_val1, loss_norm1, loss_anomaly1, AE_auc1, MP_auc, iteration))
-			print_green('LOSS: T {0:.4f}, V {1:.4f}, Norm {2:.4f}, Anomaly {3:.4f}; AUC: AE {4:.4f}, M: {5:.4f}; iter {6:}'.\
-					format(loss_trn2, loss_val2, loss_norm2, loss_anomaly2, AE_auc2, MP_auc, iteration))
+					format(loss_trn, loss_val, loss_norm, loss_anomaly, AE_auc, MP_auc, iteration))
 			# save model
 			saver.save(sess, model_folder +'/model', global_step= iteration)
 			# save results
-			loss_trn_list1, loss_val_list1, loss_norm_list1, loss_anomaly_list1, auc_list1 =\
-				np.append(loss_trn_list1, loss_trn1), np.append(loss_val_list1, loss_val1),\
-					np.append(loss_norm_list1, loss_norm1), np.append(loss_anomaly_list1, loss_anomaly1), np.append(auc_list1, AE_auc1)
-			loss_trn_list2, loss_val_list2, loss_norm_list2, loss_anomaly_list2, auc_list2 =\
-				np.append(loss_trn_list2, loss_trn2), np.append(loss_val_list2, loss_val2),\
-					np.append(loss_norm_list2, loss_norm2), np.append(loss_anomaly_list2, loss_anomaly2), np.append(auc_list2, AE_auc2)
-			np.savetxt(model_folder+'/train_loss1.txt', loss_trn_list1); np.savetxt(model_folder+'/val_loss1.txt', loss_val_list1)
-			np.savetxt(model_folder+'/norm_loss1.txt', loss_norm_list1); np.savetxt(model_folder+'/anomaly_loss1.txt',loss_anomaly_list1)
-			plot_LOSS(model_folder+'/loss-1-{}.png'.format(model_name), 0, loss_trn_list1, loss_val_list1, loss_norm_list1, loss_anomaly_list1)
-			np.savetxt(model_folder+'/AE_auc1.txt', auc_list1); plot_AUC(model_folder+'/auc1-{}.png'.format(model_name), auc_list1)
-			np.savetxt(model_folder+'/train_loss2.txt', loss_trn_list2); np.savetxt(model_folder+'/val_loss2.txt', loss_val_list2)
-			np.savetxt(model_folder+'/norm_loss2.txt', loss_norm_list2); np.savetxt(model_folder+'/anomaly_loss2.txt',loss_anomaly_list2)
-			plot_LOSS(model_folder+'/loss-2-{}.png'.format(model_name), 0, loss_trn_list2, loss_val_list2, loss_norm_list2, loss_anomaly_list2)
-			np.savetxt(model_folder+'/AE_auc2.txt', auc_list2); plot_AUC(model_folder+'/auc2-{}.png'.format(model_name), auc_list2)
-			if best_loss_val1 > loss_val1:
-				best_loss_val1 = loss_val1
-				saver.save(sess, model_folder +'/best1'); print_red('update best 1:{}'.format(model_name))
-				np.savetxt(model_folder+'/AE_stat1.txt', recon_errs1); np.savetxt(model_folder+'/best_auc2.txt',[AE_auc1, MP_auc])
-				plot_hist(model_folder+'/hist-1-{}.png'.format(model_name), recon_errs1[:int(len(recon_errs1)/2)], recon_errs1[int(len(recon_errs1)/2):])
-				save_recon_images(model_folder+'/recon-1-{}.png'.format(model_name), Xt, y_recon1, recon_err_map1, fig_size = [11,5])
-			if best_loss_val2 > loss_val2:
-				best_loss_val2 = loss_val2
-				saver.save(sess, model_folder +'/best2'); print_red('update best 2:{}'.format(model_name))
-				np.savetxt(model_folder+'/AE_stat2.txt', recon_errs2); np.savetxt(model_folder+'/best_auc2.txt',[AE_auc2, MP_auc])
-				plot_hist(model_folder+'/hist-2-{}.png'.format(model_name), recon_errs2[:int(len(recon_errs2)/2)], recon_errs2[int(len(recon_errs2)/2):])
-				save_recon_images(model_folder+'/recon-2-{}.png'.format(model_name), Xt, y_recon2, recon_err_map2, fig_size = [11,5])
+			loss_trn_list, loss_val_list, loss_norm_list, loss_anomaly_list, auc_list =\
+				np.append(loss_trn_list, loss_trn), np.append(loss_val_list, loss_val),\
+					np.append(loss_norm_list, loss_norm), np.append(loss_anomaly_list, loss_anomaly), np.append(auc_list, AE_auc)
+			np.savetxt(model_folder+'/train_loss.txt', loss_trn_list); np.savetxt(model_folder+'/val_loss.txt', loss_val_list)
+			np.savetxt(model_folder+'/norm_loss.txt', loss_norm_list); np.savetxt(model_folder+'/anomaly_loss.txt',loss_anomaly_list)
+			plot_LOSS(model_folder+'/loss-{}.png'.format(model_name), 0, loss_trn_list, loss_val_list, loss_norm_list, loss_anomaly_list)
+			np.savetxt(model_folder+'/AE_auc.txt', auc_list); plot_AUC(model_folder+'/auc-{}.png'.format(model_name), auc_list)
+
+			if best_loss_val > loss_val:
+				best_loss_val = loss_val
+				saver.save(sess, model_folder +'/best'); print_red('update best:{}'.format(model_name))
+				np.savetxt(model_folder+'/AE_stat.txt', recon_errs); np.savetxt(model_folder+'/best_auc.txt',[AE_auc, MP_auc])
+				plot_hist(model_folder+'/hist-{}.png'.format(model_name), recon_errs[:int(len(recon_errs)/2)], recon_errs[int(len(recon_errs)/2):])
+				save_recon_images(model_folder+'/recon-{}.png'.format(model_name), Xt, y_recon, recon_err_map, fig_size = [11,5])
