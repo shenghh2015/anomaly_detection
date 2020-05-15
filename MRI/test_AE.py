@@ -180,7 +180,8 @@ gpu = 2; docker = True
 os.environ["CUDA_VISIBLE_DEVICES"] = str(gpu)
 
 if docker:
-	output_folder = '/data/results/MRI/MRI_AE'
+# 	output_folder = '/data/results/MRI/MRI_AE'
+	output_folder = '/data/results/MRI/'
 else:
 	output_folder = './data/MRI'
 
@@ -188,7 +189,12 @@ else:
 # model_name = 'AE2-MRI-cn-4-fr-32-ks-3-bn-True-skp-False-res-False-lr-0.0001-stps-200000-bz-50-tr-65k-vl-200-test-200-n-40.0'
 #model_name = 'AE1-MRI-cn-4-fr-32-ks-5-bn-True-skp-False-res-False-lr-0.0001-stps-300000-bz-50-tr-65k-vl-200-test-200-n-50.0'
 #model_name = 'AE2-MRI-cn-6-fr-32-ks-3-bn-True-skp-False-res-False-lr-0.0001-stps-200000-bz-50-tr-65k-vl-200-test-200-n-40.0-l-correntropy'
-model_name = 'AE2-MRI-cn-4-fr-32-ks-3-bn-True-skp-False-res-False-lr-0.0001-stps-200000-bz-50-tr-65k-vl-200-test-200-n-45.0-l-mse'
+# model_name = 'AE2-MRI-cn-4-fr-32-ks-3-bn-True-skp-False-res-False-lr-0.0001-stps-200000-bz-50-tr-65k-vl-200-test-200-n-45.0-l-mse'
+# model_name = 'AE1-MRI-cn-4-fr-32-ks-5-bn-True-skp-False-res-False-lr-1e-05-stps-1000-bz-50-tr-65k-vl-200-test-200-n-35-l-mse'
+#model_name = 'AE2-MRI-cn-4-fr-32-ks-5-bn-True-skp-False-res-False-lr-0.0001-stps-200000-bz-50-tr-65k-vl-200-test-200-NL-0.0-fact-4.0-l-mse'
+# model_name = 'AE2-MRI-cn-4-fr-32-ks-5-bn-True-skp-False-res-False-lr-0.0001-stps-200000-bz-50-tr-65k-vl-200-test-200-NL-10.0-fact-4.0-l-mse'
+# model_name = 'AE2-MRI-cn-4-fr-32-ks-5-bn-True-skp-False-res-False-lr-0.0001-stps-200000-bz-50-tr-65k-vl-200-test-200-NL-15.0-fact-4.0-l-mse'
+model_name = 'AE2-MRI-cn-4-fr-32-ks-5-bn-False-skp-False-res-False-lr-0.0001-stps-200000-bz-50-tr-65k-vl-200-test-200-NL-0.0-fact-4.0-l-mse'
 splits = model_name.split('-')
 if len(splits[0])<=2:
 	version =1
@@ -199,6 +205,11 @@ for i in range(len(splits)):
 		nb_cnn = int(splits[i+1])
 	elif splits[i] == 'fr':
 		filters = int(splits[i+1])
+	elif splits[i] == 'bn':
+		if splits[i+1]=='True':
+			batch_norm = True
+		else:
+			batch_norm = False
 	elif splits[i] == 'ks':
 		kernel_size = int(splits[i+1])
 	elif splits[i] == 'tr':
@@ -207,7 +218,7 @@ for i in range(len(splits)):
 		val = int(splits[i+1])
 	elif splits[i] == 'test':
 		test = int(splits[i+1])
-	elif splits[i] == 'n':
+	elif splits[i] == 'n' or splits[i]=='NL':
 		noise = float(splits[i+1])
 
 model_folder = os.path.join(output_folder, model_name)
@@ -224,7 +235,7 @@ X_SA_trn, X_SA_val, X_SA_tst, X_SP_tst, Xt = np.expand_dims(X_SA_trn, axis = 3),
 		 np.expand_dims(X_SP_tst, axis = 3), np.expand_dims(Xt, axis = 3)
 print_red('Data Loaded !')
 
-batch_norm = True 
+# batch_norm = True 
 bn_training = False
 scope = 'base'
 x = tf.placeholder("float", shape=[None, 256, 256, 1])
@@ -264,24 +275,32 @@ with tf.Session() as sess:
 	y_recon = np.concatenate([Yn, Ya], axis = 0)
 	# reconstruction errors-based detection
 	norm_err_map_list = []
+	norm_err_n_list = []
 	for i in range(X_SA_tst.shape[0]):
 		norm_image = X_SA_tst[i,:].reshape((1,256,256,1))
-		norm_err_map_list.append(sqr_err.eval(session = sess, feed_dict = {x: norm_image, is_training: False}))
-	norm_err_map_arr = np.concatenate(norm_err_map_list, axis = 0)
+		norm_err = sqr_err.eval(session = sess, feed_dict = {x: norm_image, is_training: False})
+		norm_err_n = (norm_err - np.min(norm_err))/(np.max(norm_err)-np.min(norm_err))
+		norm_err_map_list.append(norm_err); norm_err_n_list.append(norm_err_n)
+	norm_err_map_arr = np.concatenate(norm_err_map_list, axis = 0); norm_err_n_arr = np.concatenate(norm_err_n_list, axis = 0)
 	anomaly_err_map_list = []
+	anomaly_err_n_list = []
 	for i in range(X_SP_tst.shape[0]):
 		anomaly_image = X_SP_tst[i,:].reshape((1,256,256,1))
-		anomaly_err_map_list.append(sqr_err.eval(session = sess, feed_dict = {x: anomaly_image, is_training: False}))
-	anomaly_err_map_arr = np.concatenate(anomaly_err_map_list, axis = 0)
+		anomaly_err = sqr_err.eval(session = sess, feed_dict = {x: anomaly_image, is_training: False})
+		anomaly_err_n = (anomaly_err - np.min(anomaly_err))/(np.max(anomaly_err)-np.min(anomaly_err))
+		anomaly_err_map_list.append(anomaly_err); anomaly_err_n_list.append(anomaly_err_n)
+	anomaly_err_map_arr = np.concatenate(anomaly_err_map_list, axis = 0); anomaly_err_n_arr = np.concatenate(anomaly_err_n_list, axis = 0)
 	norm_err_map = sqr_err.eval(session = sess, feed_dict = {x: X_SA_tst, is_training: False}); anomaly_err_map = sqr_err.eval(session = sess, feed_dict = {x: X_SP_tst, is_training: False})
-	print('Difference: SA {0:.4f} SP {1:.4f}'.format(np.sum(norm_err_map_arr - norm_err_map), np.sum(anomaly_err_map_arr - anomaly_err_map)))
+	print('Difference: SA {0:.4f} SP {1:.4f}'.format(np.sum(np.abs(norm_err_map_arr - norm_err_map)), np.sum(np.abs(anomaly_err_map_arr - anomaly_err_map))))
 	recon_err_map = np.concatenate([norm_err_map, anomaly_err_map], axis = 0)
-	recon_err_map1 = np.concatenate([norm_err_map_arr, anomaly_err_map], axis = 0)
+	recon_err_n_map = np.concatenate([norm_err_n_arr, anomaly_err_n_arr])
+	recon_err_map1 = np.concatenate([norm_err_map_arr, anomaly_err_map_arr], axis = 0)
 	recon_errs = np.apply_over_axes(np.mean, recon_err_map, [1,2,3]).flatten(); AE_auc = roc_auc_score(yt, recon_errs)
 	recon_errs1 = np.apply_over_axes(np.mean, recon_err_map1, [1,2,3]).flatten(); AE_auc1 = roc_auc_score(yt, recon_errs1)
+	recon_errs_n = np.apply_over_axes(np.mean, recon_err_n_map, [1,2,3]).flatten(); AE_auc_n = roc_auc_score(yt, recon_errs_n)
 	# pixel mean-based detection
 	img_means = np.squeeze(np.apply_over_axes(np.mean, Xt, axes = [1,2,3])); MP_auc = roc_auc_score(yt, img_means)
-	print_yellow('AUC: AE {0:.4f} AE(compare) {1:.4f} MP: {2:.4f}'.format(AE_auc, AE_auc1, MP_auc))
+	print_yellow('AUC: AE {0:.4f} AE(compare) {1:.4f} AE(normalized) {2:.4f} MP: {3:.4f}'.format(AE_auc, AE_auc1, AE_auc_n, MP_auc))
 	print(model_name)
 	np.savetxt(os.path.join(model_folder,'AE_stat.txt'), recon_errs)
 	np.savetxt(os.path.join(model_folder,'MP_stat.txt'), img_means)
