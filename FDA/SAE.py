@@ -191,6 +191,7 @@ parser.add_argument("--res", type=str2bool, default = False)
 parser.add_argument("--lr", type=float, default = 1e-5)
 parser.add_argument("--step", type=int, default = 1000)
 parser.add_argument("--bz", type=int, default = 50)
+parser.add_argument("--dataset", type=str, default = 'dense')
 parser.add_argument("--train", type=int, default = 20000)
 parser.add_argument("--val", type=int, default = 200)
 parser.add_argument("--test", type=int, default = 200)
@@ -214,6 +215,7 @@ residual = args.res
 lr = args.lr
 nb_steps = args.step
 batch_size = args.bz
+dataset = args.dataset
 train = args.train
 val = args.val
 test = args.test
@@ -225,22 +227,23 @@ loss2 = args.loss2
 os.environ["CUDA_VISIBLE_DEVICES"] = str(gpu)
 
 if docker:
-	output_folder = '/data/results/MRI'
+	output_folder = '/data/results/FDA'
 else:
-	output_folder = './data/MRI'
+	output_folder = './data/FDA'
 
 ## model folder
-model_name = 'AE{}-{}-cn-{}-{}-fr-{}-ks-{}-bn-{}-skp-{}-res-{}-lr-{}-stps-{}-bz-{}-tr-{}k-vl-{}-test-{}-n-{}-l-{}-{}'.format(version, os.path.basename(output_folder), nb_cnn1, nb_cnn2, filters, kernel_size, batch_norm, skip, residual, lr, nb_steps, batch_size, int(train/1000), val, test,noise, loss1, loss2)
+model_name = 'AE{}-{}-{}-cn-{}-{}-fr-{}-ks-{}-bn-{}-skp-{}-res-{}-lr-{}-stps-{}-bz-{}-tr-{}k-vl-{}-test-{}-l-{}-{}'.format(version, os.path.basename(output_folder), dataset, nb_cnn1, nb_cnn2, filters, kernel_size, batch_norm, skip, residual, lr, nb_steps, batch_size, int(train/1000), val, test, loss1, loss2)
 model_folder = os.path.join(output_folder, model_name)
 generate_folder(model_folder)
 
 #image size
-img_size = 256
+img_size = 128
 ## load dataset
 print_red('Data loading ...')
-X_SA_trn, X_SA_val, X_SA_tst, X_SP_tst = load_MRI_true_data(docker = docker, train = train, val = val, normal = test, anomaly = test, noise = noise)
+X_SA_trn, X_SA_val, X_SA_tst, X_SP_tst = load_anomaly_data(docker = docker, dataset = dataset, train = train, valid = val, test = test)
 print_red('Data 0-1 normalization ...')
 X_SA_trn, X_SA_val, X_SA_tst, X_SP_tst = normalize_0_1(X_SA_trn), normalize_0_1(X_SA_val), normalize_0_1(X_SA_tst), normalize_0_1(X_SP_tst)
+X_SA_trn, X_SA_val, X_SA_tst, X_SP_tst = pad_128(X_SA_trn), pad_128(X_SA_val), pad_128(X_SA_tst), pad_128(X_SP_tst)
 ## Dimension adjust
 X_SA_trn, X_SA_val, X_SA_tst, X_SP_tst = np.expand_dims(X_SA_trn, axis = 3), np.expand_dims(X_SA_val, axis = 3), np.expand_dims(X_SA_tst, axis = 3),\
 		 np.expand_dims(X_SP_tst, axis = 3)
