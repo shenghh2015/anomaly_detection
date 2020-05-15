@@ -245,8 +245,10 @@ print_red('Data ready!')
 # create the graph
 scope = 'base'
 x = tf.placeholder("float", shape=[None, img_size, img_size, 1])
+is_training = tf.placeholder_with_default(False, (), 'is_training')
+
 if version == 1 or version ==2:
-	h1, h2, y = auto_encoder(x, nb_cnn = nb_cnn, bn = batch_norm, bn_training = True, filters = filters, kernel_size = [kernel_size, kernel_size], scope_name = scope)
+	h1, h2, y = auto_encoder(x, nb_cnn = nb_cnn, bn = batch_norm, bn_training = is_training, filters = filters, kernel_size = [kernel_size, kernel_size], scope_name = scope)
 elif version == 3:
 	h1, h2, y = auto_encoder2(x, nb_cnn = nb_cnn, bn = batch_norm,  filters = filters, kernel_size = [kernel_size, kernel_size], scope_name = scope)
 
@@ -268,7 +270,10 @@ elif loss == 'bce':
 
 # loss function
 err_mean = tf.reduce_mean(err_map, [1,2,3]); cost = tf.reduce_mean(err_mean)
-trn_step = tf.train.AdamOptimizer(lr).minimize(cost, var_list= vars_list)
+
+update_ops = tf.get_collection(tf.GraphKeys.UPDATE_OPS)
+with tf.control_dependencies(update_ops):
+    trn_step = tf.train.AdamOptimizer(lr).minimize(cost, var_list= tf.trainable_variables(scope))
 
 # save the results for the methods by use of mean of pixels
 Xt = np.expand_dims(np.concatenate([X_SA_tst, X_SP_tst], axis = 0), axis = 3)
@@ -288,17 +293,17 @@ with tf.Session() as sess:
 	for iteration in range(nb_steps):
 		indices = np.random.randint(0, X_SA_trn.shape[0]-1, batch_size)
 		# train with batches
-		batch_x = X_SA_trn[indices,:]; sess.run(trn_step, feed_dict={x: batch_x})
+		batch_x = X_SA_trn[indices,:]; sess.run(trn_step, feed_dict={x: batch_x, is_training: True})
 		if iteration%100 == 0:
-			loss_trn = cost.eval(session = sess, feed_dict = {x:batch_x})
-			loss_val = cost.eval(session = sess, feed_dict = {x:X_SA_val})
-			loss_norm = cost.eval(session = sess, feed_dict = {x:X_SA_tst})
-			loss_anomaly = cost.eval(session = sess, feed_dict = {x:X_SP_tst})
+			loss_trn = cost.eval(session = sess, feed_dict = {x:batch_x, is_training: False})
+			loss_val = cost.eval(session = sess, feed_dict = {x:X_SA_val, is_training: False})
+			loss_norm = cost.eval(session = sess, feed_dict = {x:X_SA_tst, is_training: False})
+			loss_anomaly = cost.eval(session = sess, feed_dict = {x:X_SP_tst, is_training: False})
 			# reconstructed images
-			Yn = y.eval(session = sess, feed_dict = {x: X_SA_tst}); Ya = y.eval(session = sess, feed_dict = {x: X_SP_tst})
+			Yn = y.eval(session = sess, feed_dict = {x: X_SA_tst, is_training: False}); Ya = y.eval(session = sess, feed_dict = {x: X_SP_tst, is_training: False})
 			y_recon = np.concatenate([Yn, Ya], axis = 0)
 			# reconstruction errors-based detection
-			norm_err_map = err_map.eval(session = sess, feed_dict = {x: X_SA_tst}); anomaly_err_map = err_map.eval(session = sess, feed_dict = {x: X_SP_tst})
+			norm_err_map = err_map.eval(session = sess, feed_dict = {x: X_SA_tst, is_training: False}); anomaly_err_map = err_map.eval(session = sess, feed_dict = {x: X_SP_tst, is_training: False})
 			recon_err_map = np.concatenate([norm_err_map, anomaly_err_map], axis = 0)
 			recon_errs = np.apply_over_axes(np.mean, recon_err_map, [1,2,3]).flatten(); AE_auc = roc_auc_score(yt, recon_errs)
 			# print out results

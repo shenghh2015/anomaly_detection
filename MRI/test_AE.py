@@ -188,6 +188,7 @@ else:
 # model_name = 'AE2-MRI-cn-4-fr-32-ks-3-bn-True-skp-False-res-False-lr-0.0001-stps-200000-bz-50-tr-65k-vl-200-test-200-n-40.0'
 #model_name = 'AE1-MRI-cn-4-fr-32-ks-5-bn-True-skp-False-res-False-lr-0.0001-stps-300000-bz-50-tr-65k-vl-200-test-200-n-50.0'
 #model_name = 'AE2-MRI-cn-6-fr-32-ks-3-bn-True-skp-False-res-False-lr-0.0001-stps-200000-bz-50-tr-65k-vl-200-test-200-n-40.0-l-correntropy'
+model_name = 'AE2-MRI-cn-4-fr-32-ks-3-bn-True-skp-False-res-False-lr-0.0001-stps-200000-bz-50-tr-65k-vl-200-test-200-n-45.0-l-mse'
 splits = model_name.split('-')
 if len(splits[0])<=2:
 	version =1
@@ -224,20 +225,22 @@ X_SA_trn, X_SA_val, X_SA_tst, X_SP_tst, Xt = np.expand_dims(X_SA_trn, axis = 3),
 print_red('Data Loaded !')
 
 batch_norm = True 
-bn_training = True
+bn_training = False
 scope = 'base'
 x = tf.placeholder("float", shape=[None, 256, 256, 1])
+is_training = tf.placeholder_with_default(False, (), 'is_training')
+
 if version == 1:
-	h1, h2, y = auto_encoder(x, nb_cnn = nb_cnn, bn = batch_norm, bn_training = bn_training, filters = filters, kernel_size = [kernel_size, kernel_size], scope_name = scope)
+	h1, h2, y = auto_encoder(x, nb_cnn = nb_cnn, bn = batch_norm, bn_training = is_training, filters = filters, kernel_size = [kernel_size, kernel_size], scope_name = scope)
 elif version == 2:
-	h1, h2, y = auto_encoder(x, nb_cnn = nb_cnn, bn = batch_norm, bn_training = bn_training, filters = filters, kernel_size = [kernel_size, kernel_size], scope_name = scope)
+	h1, h2, y = auto_encoder(x, nb_cnn = nb_cnn, bn = batch_norm, bn_training = is_training, filters = filters, kernel_size = [kernel_size, kernel_size], scope_name = scope)
 sqr_err = tf.square(y - x)
 
 # err_correntropy = -tf.exp(-tf.square(x - y)/sigma)
-
+# tf.keras.backend.clear_session()
 # create a saver
-vars_list = tf.trainable_variables(scope)
-key_list = [v.name[:-2] for v in tf.trainable_variables(scope)]
+vars_list = tf.global_variables(scope)
+key_list = [v.name[:-2] for v in tf.global_variables(scope)]
 key_direct = {}
 for key, var in zip(key_list, vars_list):
 	key_direct[key] = var
@@ -251,22 +254,26 @@ for v in key_list:
 with tf.Session() as sess:
 	tf.global_variables_initializer().run(session=sess)
 	saver.restore(sess, model_folder+'/best')
+# 	saver.restore(sess, model_folder + '/model-1900')
+# 	tf.reset_default_graph()
+# 	imported_graph = tf.train.import_meta_graph(model_folder + '/model-4500.meta')
+# 	imported_graph.restore(sess, model_folder + '/model-4500')
 	# reconstructed images
-	Yn = y.eval(session = sess, feed_dict = {x: X_SA_tst}); Ya = y.eval(session = sess, feed_dict = {x: X_SP_tst})
+	Yn = y.eval(session = sess, feed_dict = {x: X_SA_tst, is_training: False}); Ya = y.eval(session = sess, feed_dict = {x: X_SP_tst, is_training: False})
 	
 	y_recon = np.concatenate([Yn, Ya], axis = 0)
 	# reconstruction errors-based detection
 	norm_err_map_list = []
 	for i in range(X_SA_tst.shape[0]):
 		norm_image = X_SA_tst[i,:].reshape((1,256,256,1))
-		norm_err_map_list.append(sqr_err.eval(session = sess, feed_dict = {x: norm_image}))
+		norm_err_map_list.append(sqr_err.eval(session = sess, feed_dict = {x: norm_image, is_training: False}))
 	norm_err_map_arr = np.concatenate(norm_err_map_list, axis = 0)
 	anomaly_err_map_list = []
 	for i in range(X_SP_tst.shape[0]):
 		anomaly_image = X_SP_tst[i,:].reshape((1,256,256,1))
-		anomaly_err_map_list.append(sqr_err.eval(session = sess, feed_dict = {x: anomaly_image}))
+		anomaly_err_map_list.append(sqr_err.eval(session = sess, feed_dict = {x: anomaly_image, is_training: False}))
 	anomaly_err_map_arr = np.concatenate(anomaly_err_map_list, axis = 0)
-	norm_err_map = sqr_err.eval(session = sess, feed_dict = {x: X_SA_tst}); anomaly_err_map = sqr_err.eval(session = sess, feed_dict = {x: X_SP_tst})
+	norm_err_map = sqr_err.eval(session = sess, feed_dict = {x: X_SA_tst, is_training: False}); anomaly_err_map = sqr_err.eval(session = sess, feed_dict = {x: X_SP_tst, is_training: False})
 	print('Difference: SA {0:.4f} SP {1:.4f}'.format(np.sum(norm_err_map_arr - norm_err_map), np.sum(anomaly_err_map_arr - anomaly_err_map)))
 	recon_err_map = np.concatenate([norm_err_map, anomaly_err_map], axis = 0)
 	recon_err_map1 = np.concatenate([norm_err_map_arr, anomaly_err_map], axis = 0)
