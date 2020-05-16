@@ -20,4 +20,4 @@
 # python noiseAE.py --gpu 0 --cn 4 --fr 32 --ks 5 --bn True --lr 1e-4 --step 200000 --bz 50 --train 65000 --val 200 --test 200 --noise_level 0 --us_factor 4 --version 2
 
 # May 15, 2020
-python AE_train.py --gpu 0 --cn 4 --fr 32 --ks 5 --bn True --lr 1e-4 --step 100000 --bz 50 --train 65000 --val 400 --test 1000
+python AE_train.py --gpu 0 --cn 6 --fr 32 --ks 5 --bn True --lr 1e-4 --step 100000 --bz 50 --train 65000 --val 400 --test 1000
