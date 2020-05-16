@@ -17,7 +17,7 @@ from load_data import *
 from models2 import auto_encoder
 from helper_function import normalize_0_1, print_yellow, print_red, print_green, print_block
 from helper_function import plot_hist, plot_LOSS, plot_AUC, plot_hist_pixels
-from helper_function import generate_folder
+from helper_function import generate_folder, save_recon_images
 
 ## functions
 def str2bool(value):
