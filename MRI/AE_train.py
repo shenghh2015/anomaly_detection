@@ -125,11 +125,10 @@ def evaluate(sess, y, x, is_training, err_map, cost, X_tst, batch_size = 100):
 		batch_x = X_tst[batch_size*i: min(batch_size*(i+1), X_tst.shape[0]),:]
 		y_recon = y.eval(session = sess, feed_dict = {x:batch_x,is_training: False})
 		y_list.append(y_recon)
-		print(len(y_list), y_recon.shape)
 		err_map_list.append(err_map.eval(session = sess, feed_dict = {x:batch_x,is_training: False}))
 		cost_list.append(cost.eval(session = sess, feed_dict = {x:batch_x,is_training: False}))
 		i = i +1
-	y_arr, err_map_arr, cost_arr = np.concatenate(y_list, axis = 0), np.concatenate(err_map_list, axis = 0), np.mean(cost_list)
+	y_arr, err_map_arr, _cost = np.concatenate(y_list, axis = 0), np.concatenate(err_map_list, axis = 0), np.mean(cost_list)
 	return y_arr, err_map_arr, _cost
 # training
 loss_trn_list, loss_val_list, loss_norm_list, loss_anomaly_list, auc_list =[],[],[],[],[]
@@ -147,7 +146,7 @@ with tf.Session() as sess:
 			loss_trn = cost.eval(session = sess, feed_dict = {x:batch_x,is_training: False})
 			Yn, norm_err_map, loss_norm = evaluate(sess, y, x, is_training, err_map, cost, X_SA_tst)
 			Ya, anomaly_err_map, loss_anomaly = evaluate(sess, y, x, is_training, err_map, cost, X_SP_tst)
-			_, _, loss_val = evaluate(sess, y, x, is_training, err_map, cost, X_val_tst)		
+			_, _, loss_val = evaluate(sess, y, x, is_training, err_map, cost, X_SA_val)		
 # 			loss_val = cost.eval(session = sess, feed_dict = {x:X_SA_val,is_training: False})
 # 			loss_norm = cost.eval(session = sess, feed_dict = {x:X_SA_tst,is_training: False})
 # 			loss_anomaly = cost.eval(session = sess, feed_dict = {x:X_SP_tst,is_training: False})
