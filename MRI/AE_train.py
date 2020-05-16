@@ -16,7 +16,7 @@ from load_data import *
 # from models import *
 from models2 import auto_encoder
 from helper_function import normalize_0_1, print_yellow, print_red, print_green, print_block
-from helper_function import plot_hist, plot_LOSS, plot_AUC, plot_loss, plot_auc
+from helper_function import plot_hist, plot_LOSS, plot_AUC, plot_hist_pixels
 from helper_function import generate_folder
 
 ## functions
@@ -24,9 +24,10 @@ def str2bool(value):
     return value.lower() == 'true'
 
 parser = argparse.ArgumentParser()
-parser.add_argument("--gpu", type=int, default = 1)
+parser.add_argument("--gpu", type=int, default = 0)
 parser.add_argument("--docker", type = str2bool, default = True)
 parser.add_argument("--cn", type=int, default = 4)
+parser.add_argument("--bn", type=str2bool, default = True)
 parser.add_argument("--fr", type=int, default = 32)
 parser.add_argument("--ks", type=int, default = 5)
 parser.add_argument("--lr", type=float, default = 1e-5)
@@ -103,8 +104,6 @@ if loss == 'mse':
 elif loss == 'correntropy':
 	sigma = 0.1
 	err_map = -tf.exp(-tf.square(x - y)/sigma)
-elif loss == 'bce':
-	err_map = -x*tf.log(tf.math.sigmoid(y)) - (1-x)*tf.log(1-tf.math.sigmoid(y))
 
 # loss function
 err_mean = tf.reduce_mean(err_map, [1,2,3]); cost = tf.reduce_mean(err_mean)
@@ -119,6 +118,19 @@ yt = np.concatenate([np.zeros((len(X_SA_tst),1)), np.ones((len(X_SP_tst),1))], a
 np.savetxt(os.path.join(model_folder,'MP_stat.txt'), img_means)
 plot_hist_pixels(model_folder+'/hist_mean_pixel.png'.format(model_name), img_means[:int(len(img_means)/2)], img_means[int(len(img_means)/2):])
 
+def evaluate(sess, y, x, is_training, err_map, cost, X_tst, batch_size = 100):
+	y_list, err_map_list, cost_list = [], [], []
+	i = 0
+	while batch_size*i < X_tst.shape[0]:
+		batch_x = X_tst[batch_size*i: min(batch_size*(i+1), X_tst.shape[0]),:]
+		y_recon = y.eval(session = sess, feed_dict = {x:batch_x,is_training: False})
+		y_list.append(y_recon)
+		print(len(y_list), y_recon.shape)
+		err_map_list.append(err_map.eval(session = sess, feed_dict = {x:batch_x,is_training: False}))
+		cost_list.append(cost.eval(session = sess, feed_dict = {x:batch_x,is_training: False}))
+		i = i +1
+	y_arr, err_map_arr, cost_arr = np.concatenate(y_list, axis = 0), np.concatenate(err_map_list, axis = 0), np.mean(cost_list)
+	return y_arr, err_map_arr, _cost
 # training
 loss_trn_list, loss_val_list, loss_norm_list, loss_anomaly_list, auc_list =[],[],[],[],[]
 
@@ -133,14 +145,17 @@ with tf.Session() as sess:
 		batch_x = X_SA_trn[indices,:]; sess.run(trn_step, feed_dict={x: batch_x,is_training: True})
 		if iteration%100 == 0:
 			loss_trn = cost.eval(session = sess, feed_dict = {x:batch_x,is_training: False})
-			loss_val = cost.eval(session = sess, feed_dict = {x:X_SA_val,is_training: False})
-			loss_norm = cost.eval(session = sess, feed_dict = {x:X_SA_tst,is_training: False})
-			loss_anomaly = cost.eval(session = sess, feed_dict = {x:X_SP_tst,is_training: False})
+			Yn, norm_err_map, loss_norm = evaluate(sess, y, x, is_training, err_map, cost, X_SA_tst)
+			Ya, anomaly_err_map, loss_anomaly = evaluate(sess, y, x, is_training, err_map, cost, X_SP_tst)
+			_, _, loss_val = evaluate(sess, y, x, is_training, err_map, cost, X_val_tst)		
+# 			loss_val = cost.eval(session = sess, feed_dict = {x:X_SA_val,is_training: False})
+# 			loss_norm = cost.eval(session = sess, feed_dict = {x:X_SA_tst,is_training: False})
+# 			loss_anomaly = cost.eval(session = sess, feed_dict = {x:X_SP_tst,is_training: False})
 			# reconstructed images
-			Yn = y.eval(session = sess, feed_dict = {x: X_SA_tst,is_training: False}); Ya = y.eval(session = sess, feed_dict = {x: X_SP_tst, is_training:False})
+# 			Yn = y.eval(session = sess, feed_dict = {x: X_SA_tst,is_training: False}); Ya = y.eval(session = sess, feed_dict = {x: X_SP_tst, is_training:False})
 			y_recon = np.concatenate([Yn, Ya], axis = 0)
 			# reconstruction errors-based detection
-			norm_err_map = err_map.eval(session = sess, feed_dict = {x: X_SA_tst,is_training: False}); anomaly_err_map = err_map.eval(session = sess, feed_dict = {x: X_SP_tst,is_training: False})
+# 			norm_err_map = err_map.eval(session = sess, feed_dict = {x: X_SA_tst,is_training: False}); anomaly_err_map = err_map.eval(session = sess, feed_dict = {x: X_SP_tst,is_training: False})
 			recon_err_map = np.concatenate([norm_err_map, anomaly_err_map], axis = 0)
 			recon_errs = np.apply_over_axes(np.mean, recon_err_map, [1,2,3]).flatten(); AE_auc = roc_auc_score(yt, recon_errs)
 			# print out results

@@ -59,7 +59,8 @@ def load_MRI_anomaly(docker = False, train = 65000, val = 200, normal = 1000, an
 	print('Loaded shape: {}'.format(img.shape))
 	img_MP =  np.load(os.path.join(dataset_folder, 'axial_batch2_256x256_test_null_mask_2x_1000.npy'))
 	X_trn, X_val, X_n, X_a = img[:train,:], img[65000:65000+val,:], img[-1000:,:], img_MP
-
+	if False:
+		plot_image_pair(dataset_folder+'/image_f_meas_null.png', X_n, X_a, [8,5])
 	return X_trn, X_val, X_n, X_a
 
 
@@ -76,8 +77,6 @@ def load_MRI_true_data(docker = False, train = 65000, val = 600, normal = 1000, 
 		img = img + gauss1
 		img_MP =  np.load(os.path.join(dataset_folder, 'axial_batch2_256x256_artifact_noisy.npy'))
 	X_trn, X_val, X_n, X_a = img[:train,:], img[65000:65000+val,:], img[65600:65600+normal,:], img_MP[65600:65600+anomaly,:]
-	if False:
-		plot_image_pair(dataset_folder+'/image_f_meas_null.png', X_n, X_a, [8,5])
 	return X_trn, X_val, X_n, X_a
 
 def load_MRI_true_Poisson(docker = False, train = 65000, val = 600, normal = 1000, anomaly = 1000, noise = 0):
