@@ -50,6 +50,19 @@ def load_MRI_data(docker = False, train = 65000, val = 600, normal = 1000, anoma
 	X_trn, X_val, X_n, X_a = img[:train,:], img[65000:65000+val,:], img[65600:65600+normal,:], img_MP[65600:65600+anomaly,:]
 	return X_trn, X_val, X_n, X_a
 
+def load_MRI_anomaly(docker = False, train = 65000, val = 200, normal = 1000, anomaly = 1000, noise_level = 0, us_factor = 4):
+	if docker:
+		dataset_folder = '/data/datasets/MRI'
+	else:
+		dataset_folder = '/shared/planck/CommonData/MRI/anomaly_detection_data'
+	img = np.load(os.path.join(dataset_folder, 'axial_batch2_256x256.npy'))
+	print('Loaded shape: {}'.format(img.shape))
+	img_MP =  np.load(os.path.join(dataset_folder, 'axial_batch2_256x256_test_null_mask_2x_1000.npy'))
+	X_trn, X_val, X_n, X_a = img[:train,:], img[65000:65000+val,:], img[-1000:,:], img_MP
+
+	return X_trn, X_val, X_n, X_a
+
+
 def load_MRI_true_data(docker = False, train = 65000, val = 600, normal = 1000, anomaly = 1000, noise = 0):
 	if docker:
 		dataset_folder = '/data/datasets/MRI'
@@ -63,6 +76,8 @@ def load_MRI_true_data(docker = False, train = 65000, val = 600, normal = 1000, 
 		img = img + gauss1
 		img_MP =  np.load(os.path.join(dataset_folder, 'axial_batch2_256x256_artifact_noisy.npy'))
 	X_trn, X_val, X_n, X_a = img[:train,:], img[65000:65000+val,:], img[65600:65600+normal,:], img_MP[65600:65600+anomaly,:]
+	if False:
+		plot_image_pair(dataset_folder+'/image_f_meas_null.png', X_n, X_a, [8,5])
 	return X_trn, X_val, X_n, X_a
 
 def load_MRI_true_Poisson(docker = False, train = 65000, val = 600, normal = 1000, anomaly = 1000, noise = 0):
