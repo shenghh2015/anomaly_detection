@@ -144,10 +144,11 @@ with tf.Session() as sess:
 	## plot err histogram and recon images
 	idx1, idx2, idx3 = int(len(recon_errs)/4), int(len(recon_errs)/2), int(len(recon_errs)*3/4)
 	err_stat_list = [recon_errs[:idx1], recon_errs[idx1:idx2], recon_errs[idx2:idx3], recon_errs[idx3:]]
+	max_value, min_value = np.min(recon_errs), np.max(recon_errs)
 	print_green('Length: norm {} anom1 {} anom2 {} anom3 {}'.format(len(recon_errs[:idx1]), len(recon_errs[idx1:idx2]), len(recon_errs[idx2:idx3]), len(recon_errs[idx3:])))
-	plot_hist_list(result_folder+'/hist-{}.png'.format(model_name), err_stat_list, ['Norm', 'Anomaly1', 'Anomaly2', 'Anomaly3'], ['g', 'r', 'b', 'k'])
-	plot_hist_list(result_folder+'/hist1-{}.png'.format(model_name), [recon_errs[:idx1], recon_errs[idx1:idx2]], ['Norm', 'Anomaly1'])
-	plot_hist_list(result_folder+'/hist2-{}.png'.format(model_name), [recon_errs[:idx1], recon_errs[idx2:idx3]], ['Norm', 'Anomaly2'])
-	plot_hist_list(result_folder+'/hist3-{}.png'.format(model_name), [recon_errs[:idx1], recon_errs[idx3:]], ['Norm','Anomaly3'])
+	plot_hist_list(result_folder+'/hist-{}.png'.format(model_name), err_stat_list, ['Norm', 'Anomaly1', 'Anomaly2', 'Anomaly3'], ['g', 'r', 'b', 'k'], [max_value, min_value])
+	plot_hist_list(result_folder+'/hist1-{}.png'.format(model_name), [recon_errs[:idx1], recon_errs[idx1:idx2]], ['Norm', 'Anomaly1'], ['g', 'r'], [max_value, min_value])
+	plot_hist_list(result_folder+'/hist2-{}.png'.format(model_name), [recon_errs[:idx1], recon_errs[idx2:idx3]], ['Norm', 'Anomaly2'], ['g', 'b'], [max_value, min_value])
+	plot_hist_list(result_folder+'/hist3-{}.png'.format(model_name), [recon_errs[:idx1], recon_errs[idx3:]], ['Norm','Anomaly3'], ['g', 'k'], [max_value, min_value])
 	save_recon_images_v2(result_folder+'/recon-{}.png'.format(model_name), Xt, recons, err_maps, fig_size = [11,10])
 	
