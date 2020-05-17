@@ -116,6 +116,28 @@ def plot_hist(file_name, x, y):
 	canvas = FigureCanvasAgg(fig)
 	canvas.print_figure(file_name, dpi=100)
 
+def plot_hist_list(file_name, stat_list, legend_list, color_list, range_tuple):
+	import matplotlib.pyplot as plt
+	from matplotlib.backends.backend_agg import FigureCanvasAgg
+	from matplotlib.figure import Figure
+	kwargs = dict(alpha=0.5, bins=100, density= False, range = range_tuple, stacked=True)
+	fig_size = (8,6)
+	fig = Figure(figsize=fig_size)
+	ax = fig.add_subplot(111)
+	for i in range(len(stat_list)):
+		legend_label = legend_list[i]
+		color = color_list[i]
+		ax.hist(stat_list[i], **kwargs, color= color, label = legend_label)
+	title = os.path.basename(os.path.dirname(file_name))
+	ax.set_title(title)
+	ax.set_xlabel('Error')
+	ax.set_ylabel('Frequency')
+	ax.legend(legend_list)
+	ax.set_xlim(range_tuple)
+	ax.set_ylim([0,400])
+	canvas = FigureCanvasAgg(fig)
+	canvas.print_figure(file_name, dpi=100)
+
 def plot_hist_pixels(file_name, x, y):
 	import matplotlib.pyplot as plt
 	from matplotlib.backends.backend_agg import FigureCanvasAgg
@@ -173,6 +195,56 @@ def save_recon_images(img_file_name, imgs, recons, errs, fig_size):
 	ax = fig.add_subplot(rows, cols, 4); cax=ax.imshow(f_MP,cmap='gray'); fig.colorbar(cax); ax.set_ylabel('Anomaly')
 	ax = fig.add_subplot(rows, cols, 5); cax=ax.imshow(f_MP_recon,cmap='gray'); fig.colorbar(cax);
 	ax = fig.add_subplot(rows, cols, 6); cax=ax.imshow(f_MP_recon_err,cmap='gray'); fig.colorbar(cax);
+	canvas = FigureCanvasAgg(fig)
+	canvas.print_figure(img_file_name, dpi=100)
+
+def save_recon_images(img_file_name, imgs, recons, errs, fig_size):
+	from matplotlib.backends.backend_agg import FigureCanvasAgg
+	from matplotlib.figure import Figure
+	imgs, recons, errs = np.squeeze(imgs), np.squeeze(recons), np.squeeze(errs)
+	test_size = imgs.shape[0]
+	indx = np.random.randint(0,int(test_size/2))
+	f, f_MP = imgs[indx,:,:], imgs[int(test_size/2)+indx,:,:]
+	f_recon, f_MP_recon = recons[indx,:,:], recons[int(test_size/2)+indx,:,:]
+	f_recon_err, f_MP_recon_err = errs[indx,:,:], errs[int(test_size/2)+indx,:,:]
+# 	fig_size = (8,6)
+	fig_size = fig_size
+	fig = Figure(figsize=fig_size)
+	rows, cols = 2, 3
+	ax = fig.add_subplot(rows, cols, 1); cax=ax.imshow(f,cmap='gray'); fig.colorbar(cax); ax.set_title('Image'); ax.set_ylabel('Normal') 
+	ax = fig.add_subplot(rows, cols, 2); cax=ax.imshow(f_recon,cmap='gray'); fig.colorbar(cax); ax.set_title('Recon');
+	ax = fig.add_subplot(rows, cols, 3); cax=ax.imshow(f_recon_err,cmap='gray'); fig.colorbar(cax); ax.set_title('Error');
+	ax = fig.add_subplot(rows, cols, 4); cax=ax.imshow(f_MP,cmap='gray'); fig.colorbar(cax); ax.set_ylabel('Anomaly')
+	ax = fig.add_subplot(rows, cols, 5); cax=ax.imshow(f_MP_recon,cmap='gray'); fig.colorbar(cax);
+	ax = fig.add_subplot(rows, cols, 6); cax=ax.imshow(f_MP_recon_err,cmap='gray'); fig.colorbar(cax);
+	canvas = FigureCanvasAgg(fig)
+	canvas.print_figure(img_file_name, dpi=100)
+
+def save_recon_images_v2(img_file_name, imgs, recons, errs, fig_size):
+	from matplotlib.backends.backend_agg import FigureCanvasAgg
+	from matplotlib.figure import Figure
+	imgs, recons, errs = np.squeeze(imgs), np.squeeze(recons), np.squeeze(errs)
+	test_size = imgs.shape[0]
+	indx = np.random.randint(0,int(test_size/4))
+	f, f_MP, f_MP1, f_MP2 = imgs[indx,:,:], imgs[int(test_size/4)+indx,:,:], imgs[int(test_size/2)+indx,:,:], imgs[int(test_size*3/4)+indx,:,:]
+	f_recon, f_MP_recon, f_MP_recon1, f_MP_recon2 = recons[indx,:,:], recons[int(test_size/4)+indx,:,:], recons[int(test_size/2)+indx,:,:], imgs[int(test_size*3/4)+indx,:,:]
+	f_recon_err, f_MP_recon_err, f_MP_recon_err1, f_MP_recon_err2 = errs[indx,:,:], errs[int(test_size/4)+indx,:,:], errs[int(test_size/2)+indx,:,:], errs[int(test_size*3/4)+indx,:,:]
+# 	fig_size = (8,6)
+	fig_size = fig_size
+	fig = Figure(figsize=fig_size)
+	rows, cols = 4, 3
+	ax = fig.add_subplot(rows, cols, 1); cax=ax.imshow(f,cmap='gray'); fig.colorbar(cax); ax.set_title('Image'); ax.set_ylabel('Normal') 
+	ax = fig.add_subplot(rows, cols, 2); cax=ax.imshow(f_recon,cmap='gray'); fig.colorbar(cax); ax.set_title('Recon');
+	ax = fig.add_subplot(rows, cols, 3); cax=ax.imshow(f_recon_err,cmap='gray'); fig.colorbar(cax); ax.set_title('Error');
+	ax = fig.add_subplot(rows, cols, 4); cax=ax.imshow(f_MP,cmap='gray'); fig.colorbar(cax); ax.set_ylabel('Anomaly1')
+	ax = fig.add_subplot(rows, cols, 5); cax=ax.imshow(f_MP_recon,cmap='gray'); fig.colorbar(cax);
+	ax = fig.add_subplot(rows, cols, 6); cax=ax.imshow(f_MP_recon_err,cmap='gray'); fig.colorbar(cax);
+	ax = fig.add_subplot(rows, cols, 7); cax=ax.imshow(f_MP1,cmap='gray'); fig.colorbar(cax); ax.set_ylabel('Anomaly2')
+	ax = fig.add_subplot(rows, cols, 8); cax=ax.imshow(f_MP_recon1,cmap='gray'); fig.colorbar(cax);
+	ax = fig.add_subplot(rows, cols, 9); cax=ax.imshow(f_MP_recon_err1,cmap='gray'); fig.colorbar(cax);
+	ax = fig.add_subplot(rows, cols, 10); cax=ax.imshow(f_MP2,cmap='gray'); fig.colorbar(cax); ax.set_ylabel('Anomaly3')
+	ax = fig.add_subplot(rows, cols, 11); cax=ax.imshow(f_MP_recon2,cmap='gray'); fig.colorbar(cax);
+	ax = fig.add_subplot(rows, cols, 12); cax=ax.imshow(f_MP_recon_err2,cmap='gray'); fig.colorbar(cax);
 	canvas = FigureCanvasAgg(fig)
 	canvas.print_figure(img_file_name, dpi=100)
 

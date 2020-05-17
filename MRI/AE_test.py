@@ -31,7 +31,8 @@ if docker:
 else:
 	output_folder = './data/MRI'
 
-model_name = 'AE1-MRI-cn-6-fr-32-ks-5-bn-False-lr-0.0001-stps-100000-bz-50-tr-65k-vl-400-test-1000-l-mse'
+# model_name = 'AE1-MRI-cn-6-fr-32-ks-5-bn-False-lr-0.0001-stps-100000-bz-50-tr-65k-vl-400-test-1000-l-mse'
+model_name = 'AE1-MRI-cn-4-fr-32-ks-5-bn-False-lr-0.0001-stps-100000-bz-50-tr-65k-vl-400-test-1000-l-mse'
 
 splits = model_name.split('-')
 if len(splits[0])<=2:
@@ -63,14 +64,14 @@ model_folder = os.path.join(output_folder, model_name)
 
 ## load data
 print_red('Data loading ...')
-_, _, X_SA_tst, X_SP_tst1 = load_MRI_true_data(docker = docker, train = train, val = val, normal = test, anomaly = test, version = 1)
-_, _, _, X_SP_tst2 = load_MRI_true_data(docker = docker, train = train, val = val, normal = test, anomaly = test, version = 2)
-_, _, _, X_SP_tst3 = load_MRI_true_data(docker = docker, train = train, val = val, normal = test, anomaly = test, version = 3)
+_, _, X_SA_tst, X_SP_tst1 = load_MRI_anomaly(docker = docker, train = train, val = val, normal = test, anomaly = test, version = 1)
+_, _, _, X_SP_tst2 = load_MRI_anomaly(docker = docker, train = train, val = val, normal = test, anomaly = test, version = 2)
+_, _, _, X_SP_tst3 = load_MRI_anomaly(docker = docker, train = train, val = val, normal = test, anomaly = test, version = 3)
 X_SA_tst, X_SP_tst1, X_SP_tst2, X_SP_tst3 = normalize_0_1(X_SA_tst), normalize_0_1(X_SP_tst1), normalize_0_1(X_SP_tst2), normalize_0_1(X_SP_tst3)
 
 ## test data
-Xt = np.concatenate([X_SA_tst, X_SP_tst], axis = 0)
-yt = np.concatenate([np.zeros((len(X_SA_tst),1)), np.ones((len(X_SP_tst),1))], axis = 0).flatten()
+Xt = np.concatenate([X_SA_tst, X_SP_tst1, X_SP_tst2, X_SP_tst3], axis = 0)
+#yt = np.concatenate([np.zeros((len(X_SA_tst),1)), np.ones((len(X_SP_tst1),1))], axis = 0).flatten()
 ## Dimension adjust
 X_SA_tst, X_SP_tst1, X_SP_tst2, X_SP_tst3, Xt = np.expand_dims(X_SA_tst, axis = 3), np.expand_dims(X_SP_tst1, axis = 3), np.expand_dims(X_SP_tst2, axis = 3),\
 		 np.expand_dims(X_SP_tst3, axis = 3), np.expand_dims(Xt, axis = 3)
@@ -86,7 +87,7 @@ if version == 1:
 	h1, h2, y = auto_encoder(x, nb_cnn = nb_cnn, bn = batch_norm, bn_training = is_training, filters = filters, kernel_size = [kernel_size, kernel_size], scope_name = scope)
 elif version == 2:
 	h1, h2, y = auto_encoder(x, nb_cnn = nb_cnn, bn = batch_norm, bn_training = is_training, filters = filters, kernel_size = [kernel_size, kernel_size], scope_name = scope)
-sqr_err = tf.square(y - x)
+err_map = tf.square(y - x)
 
 # tf.keras.backend.clear_session()
 # create a saver
@@ -101,53 +102,52 @@ saver = tf.train.Saver(key_direct, max_to_keep=1)
 for v in key_list:
 	print_green(v)
 
+def evaluate(sess, y, x, is_training, err_map, X_tst, batch_size = 100):
+	y_list, err_map_list = [], []
+	i = 0
+	while batch_size*i < X_tst.shape[0]:
+		batch_x = X_tst[batch_size*i: min(batch_size*(i+1), X_tst.shape[0]),:]
+		y_recon = y.eval(session = sess, feed_dict = {x:batch_x,is_training: False})
+		y_list.append(y_recon)
+		err_map_list.append(err_map.eval(session = sess, feed_dict = {x:batch_x,is_training: False}))
+		i = i +1
+	y_arr, err_map_arr = np.concatenate(y_list, axis = 0), np.concatenate(err_map_list, axis = 0)
+	return y_arr, err_map_arr
+
 # evaluate the model
 with tf.Session() as sess:
 	tf.global_variables_initializer().run(session=sess)
 	saver.restore(sess, model_folder+'/best')
-# 	saver.restore(sess, model_folder + '/model-1900')
-# 	tf.reset_default_graph()
-# 	imported_graph = tf.train.import_meta_graph(model_folder + '/model-4500.meta')
-# 	imported_graph.restore(sess, model_folder + '/model-4500')
-	# reconstructed images
-	Yn = y.eval(session = sess, feed_dict = {x: X_SA_tst, is_training: False}); Ya = y.eval(session = sess, feed_dict = {x: X_SP_tst, is_training: False})
+	# norm
+	Yn, norm_err_map = evaluate(sess, y, x, is_training, err_map, X_SA_tst, batch_size = 100)
+	Ya1, anom_err_map1 = evaluate(sess, y, x, is_training, err_map, X_SP_tst1, batch_size = 100)
+	Ya2, anom_err_map2 = evaluate(sess, y, x, is_training, err_map, X_SP_tst2, batch_size = 100)
+	Ya3, anom_err_map3 = evaluate(sess, y, x, is_training, err_map, X_SP_tst3, batch_size = 100)
+	norm_recon_errs = np.apply_over_axes(np.mean, norm_err_map, [1,2,3]).flatten()
+	anom_recon_errs1 = np.apply_over_axes(np.mean, anom_err_map1, [1,2,3]).flatten()
+	anom_recon_errs2 = np.apply_over_axes(np.mean, anom_err_map2, [1,2,3]).flatten()
+	anom_recon_errs3 = np.apply_over_axes(np.mean, anom_err_map3, [1,2,3]).flatten()
 	
-	y_recon = np.concatenate([Yn, Ya], axis = 0)
-	# reconstruction errors-based detection
-	norm_err_map_list = []
-	norm_err_n_list = []
-	for i in range(X_SA_tst.shape[0]):
-		norm_image = X_SA_tst[i,:].reshape((1,256,256,1))
-		norm_err = sqr_err.eval(session = sess, feed_dict = {x: norm_image, is_training: False})
-		norm_err_n = (norm_err - np.min(norm_err))/(np.max(norm_err)-np.min(norm_err))
-		norm_err_map_list.append(norm_err); norm_err_n_list.append(norm_err_n)
-	norm_err_map_arr = np.concatenate(norm_err_map_list, axis = 0); norm_err_n_arr = np.concatenate(norm_err_n_list, axis = 0)
-	anomaly_err_map_list = []
-	anomaly_err_n_list = []
-	for i in range(X_SP_tst.shape[0]):
-		anomaly_image = X_SP_tst[i,:].reshape((1,256,256,1))
-		anomaly_err = sqr_err.eval(session = sess, feed_dict = {x: anomaly_image, is_training: False})
-		anomaly_err_n = (anomaly_err - np.min(anomaly_err))/(np.max(anomaly_err)-np.min(anomaly_err))
-		anomaly_err_map_list.append(anomaly_err); anomaly_err_n_list.append(anomaly_err_n)
-	anomaly_err_map_arr = np.concatenate(anomaly_err_map_list, axis = 0); anomaly_err_n_arr = np.concatenate(anomaly_err_n_list, axis = 0)
-	norm_err_map = sqr_err.eval(session = sess, feed_dict = {x: X_SA_tst, is_training: False}); anomaly_err_map = sqr_err.eval(session = sess, feed_dict = {x: X_SP_tst, is_training: False})
-	print('Difference: SA {0:.4f} SP {1:.4f}'.format(np.sum(np.abs(norm_err_map_arr - norm_err_map)), np.sum(np.abs(anomaly_err_map_arr - anomaly_err_map))))
-	recon_err_map = np.concatenate([norm_err_map, anomaly_err_map], axis = 0)
-	recon_err_n_map = np.concatenate([norm_err_n_arr, anomaly_err_n_arr])
-	recon_err_map1 = np.concatenate([norm_err_map_arr, anomaly_err_map_arr], axis = 0)
-	recon_errs = np.apply_over_axes(np.mean, recon_err_map, [1,2,3]).flatten(); AE_auc = roc_auc_score(yt, recon_errs)
-	recon_errs1 = np.apply_over_axes(np.mean, recon_err_map1, [1,2,3]).flatten(); AE_auc1 = roc_auc_score(yt, recon_errs1)
-	recon_errs_n = np.apply_over_axes(np.mean, recon_err_n_map, [1,2,3]).flatten(); AE_auc_n = roc_auc_score(yt, recon_errs_n)
-	# pixel mean-based detection
-	img_means = np.squeeze(np.apply_over_axes(np.mean, Xt, axes = [1,2,3])); MP_auc = roc_auc_score(yt, img_means)
-	print_yellow('AUC: AE {0:.4f} AE(compare) {1:.4f} AE(normalized) {2:.4f} MP: {3:.4f}'.format(AE_auc, AE_auc1, AE_auc_n, MP_auc))
+	imgs = np.concatenate([X_SA_tst, X_SP_tst1, X_SP_tst2, X_SP_tst3], axis = 0)
+	recons = np.concatenate([Yn, Ya1, Ya2, Ya3], axis = 0)
+	err_maps = np.concatenate([norm_err_map, anom_err_map1, anom_err_map2, anom_err_map3], axis = 0)
+	recon_errs = np.concatenate([norm_recon_errs, anom_recon_errs1, anom_recon_errs2, anom_recon_errs3], axis = 0)
+# 	recon_errs = np.apply_over_axes(np.mean, err_maps, [1,2,3]).flatten()
+# 	print_yellow('AUC: AE {0:.4f} AE(compare) {1:.4f} AE(normalized) {2:.4f} MP: {3:.4f}'.format(AE_auc, AE_auc1, AE_auc_n, MP_auc))
 	print(model_name)
-	np.savetxt(os.path.join(model_folder,'AE_stat.txt'), recon_errs)
-	np.savetxt(os.path.join(model_folder,'MP_stat.txt'), img_means)
-	np.savetxt(os.path.join(model_folder,'best_auc.txt'),[AE_auc, MP_auc])
-	hist_file = os.path.join(model_folder,'hist-{}.png'.format(model_name))
-	plot_hist(hist_file, recon_errs[:int(len(recon_errs)/2)], recon_errs[int(len(recon_errs)/2):])
-	plot_hist_pixels(model_folder+'/hist_mean_pixel.png'.format(model_name), img_means[:int(len(img_means)/2)], img_means[int(len(img_means)/2):])
-	saver.save(sess, model_folder +'/best')
-	save_recon_images(model_folder+'/recon-{}.png'.format(model_name), Xt, y_recon, recon_err_map, fig_size = [11,5])
+	result_folder = model_folder + '/detection_results'
+	generate_folder(result_folder)
+	np.savetxt(os.path.join(result_folder,'norm_stat.txt'), norm_recon_errs)
+	np.savetxt(os.path.join(result_folder,'anom_stat1.txt'), anom_recon_errs1)
+	np.savetxt(os.path.join(result_folder,'anom_stat2.txt'), anom_recon_errs2)
+	np.savetxt(os.path.join(result_folder,'anom_stat3.txt'), anom_recon_errs3)
+	## plot err histogram and recon images
+	idx1, idx2, idx3 = int(len(recon_errs)/4), int(len(recon_errs)/2), int(len(recon_errs)*3/4)
+	err_stat_list = [recon_errs[:idx1], recon_errs[idx1:idx2], recon_errs[idx2:idx3], recon_errs[idx3:]]
+	print_green('Length: norm {} anom1 {} anom2 {} anom3 {}'.format(len(recon_errs[:idx1]), len(recon_errs[idx1:idx2]), len(recon_errs[idx2:idx3]), len(recon_errs[idx3:])))
+	plot_hist_list(result_folder+'/hist-{}.png'.format(model_name), err_stat_list, ['Norm', 'Anomaly1', 'Anomaly2', 'Anomaly3'], ['g', 'r', 'b', 'k'])
+	plot_hist_list(result_folder+'/hist1-{}.png'.format(model_name), [recon_errs[:idx1], recon_errs[idx1:idx2]], ['Norm', 'Anomaly1'])
+	plot_hist_list(result_folder+'/hist2-{}.png'.format(model_name), [recon_errs[:idx1], recon_errs[idx2:idx3]], ['Norm', 'Anomaly2'])
+	plot_hist_list(result_folder+'/hist3-{}.png'.format(model_name), [recon_errs[:idx1], recon_errs[idx3:]], ['Norm','Anomaly3'])
+	save_recon_images_v2(result_folder+'/recon-{}.png'.format(model_name), Xt, recons, err_maps, fig_size = [11,10])
 	
