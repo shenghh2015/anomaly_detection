@@ -15,7 +15,7 @@ import scipy.misc as misc
 from load_data import load_MRI_anomaly
 from models2 import auto_encoder
 from helper_function import normalize_0_1, print_yellow, print_red, print_green, print_block
-from helper_function import plot_hist, plot_LOSS, plot_AUC, plot_hist_pixels
+from helper_function import plot_hist, plot_LOSS, plot_AUC, plot_hist_pixels, plot_hist_list
 from helper_function import generate_folder, save_recon_images
 
 ## functions
@@ -146,9 +146,9 @@ with tf.Session() as sess:
 	err_stat_list = [recon_errs[:idx1], recon_errs[idx1:idx2], recon_errs[idx2:idx3], recon_errs[idx3:]]
 	max_value, min_value = np.min(recon_errs), np.max(recon_errs)
 	print_green('Length: norm {} anom1 {} anom2 {} anom3 {}'.format(len(recon_errs[:idx1]), len(recon_errs[idx1:idx2]), len(recon_errs[idx2:idx3]), len(recon_errs[idx3:])))
-	plot_hist_list(result_folder+'/hist-{}.png'.format(model_name), err_stat_list, ['Norm', 'Anomaly1', 'Anomaly2', 'Anomaly3'], ['g', 'r', 'b', 'k'], [max_value, min_value])
+	plot_hist_list(result_folder+'/hist-{}.png'.format(model_name), err_stat_list, ['Norm', 'Anomaly1', 'Anomaly2', 'Anomaly3'], ['g', 'r', 'b', 'y'], [max_value, min_value])
 	plot_hist_list(result_folder+'/hist1-{}.png'.format(model_name), [recon_errs[:idx1], recon_errs[idx1:idx2]], ['Norm', 'Anomaly1'], ['g', 'r'], [max_value, min_value])
 	plot_hist_list(result_folder+'/hist2-{}.png'.format(model_name), [recon_errs[:idx1], recon_errs[idx2:idx3]], ['Norm', 'Anomaly2'], ['g', 'b'], [max_value, min_value])
-	plot_hist_list(result_folder+'/hist3-{}.png'.format(model_name), [recon_errs[:idx1], recon_errs[idx3:]], ['Norm','Anomaly3'], ['g', 'k'], [max_value, min_value])
+	plot_hist_list(result_folder+'/hist3-{}.png'.format(model_name), [recon_errs[:idx1], recon_errs[idx3:]], ['Norm','Anomaly3'], ['g', 'y'], [max_value, min_value])
 	save_recon_images_v2(result_folder+'/recon-{}.png'.format(model_name), Xt, recons, err_maps, fig_size = [11,10])
 	
