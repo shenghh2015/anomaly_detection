@@ -57,7 +57,10 @@ def load_MRI_anomaly(docker = False, train = 65000, val = 200, normal = 1000, an
 		dataset_folder = '/shared/planck/CommonData/MRI/anomaly_detection_data'
 	img = np.load(os.path.join(dataset_folder, 'axial_batch2_256x256.npy'))
 	print('Loaded shape: {}'.format(img.shape))
-	if version == 1:
+	if version == 0:
+		img_MP = np.load(os.path.join(dataset_folder, 'axial_batch2_256x256_artifact.npy'))
+		img_MP = img_MP[-1000:,:]
+	elif version == 1:
 		img_MP =  np.load(os.path.join(dataset_folder, 'axial_batch2_256x256_test_null_mask_2x_1000.npy'))
 	elif version == 2:
 		img_MP =  np.load(os.path.join(dataset_folder, 'axial_batch2_256x256_test_null_mixed_mask_2x_1000.npy'))

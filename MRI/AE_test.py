@@ -64,6 +64,7 @@ model_folder = os.path.join(output_folder, model_name)
 
 ## load data
 print_red('Data loading ...')
+_, _, _, X_SP_tst = load_MRI_anomaly(docker = docker, train = train, val = val, normal = test, anomaly = test, version = 0)
 _, _, X_SA_tst, X_SP_tst1 = load_MRI_anomaly(docker = docker, train = train, val = val, normal = test, anomaly = test, version = 1)
 _, _, _, X_SP_tst2 = load_MRI_anomaly(docker = docker, train = train, val = val, normal = test, anomaly = test, version = 2)
 _, _, _, X_SP_tst3 = load_MRI_anomaly(docker = docker, train = train, val = val, normal = test, anomaly = test, version = 3)
@@ -71,6 +72,7 @@ X_SA_tst, X_SP_tst1, X_SP_tst2, X_SP_tst3 = normalize_0_1(X_SA_tst), normalize_0
 
 ## test data
 Xt = np.concatenate([X_SA_tst, X_SP_tst1, X_SP_tst2, X_SP_tst3], axis = 0)
+X_SP_tst = np.expand_dims(X_SP_tst, axis = 3)
 #yt = np.concatenate([np.zeros((len(X_SA_tst),1)), np.ones((len(X_SP_tst1),1))], axis = 0).flatten()
 ## Dimension adjust
 X_SA_tst, X_SP_tst1, X_SP_tst2, X_SP_tst3, Xt = np.expand_dims(X_SA_tst, axis = 3), np.expand_dims(X_SP_tst1, axis = 3), np.expand_dims(X_SP_tst2, axis = 3),\
@@ -114,12 +116,13 @@ def evaluate(sess, y, x, is_training, err_map, X_tst, batch_size = 100):
 	y_arr, err_map_arr = np.concatenate(y_list, axis = 0), np.concatenate(err_map_list, axis = 0)
 	return y_arr, err_map_arr
 
-# evaluate the model
+# evaluate the reconstruction errs
 with tf.Session() as sess:
 	tf.global_variables_initializer().run(session=sess)
 	saver.restore(sess, model_folder+'/best')
 	# norm
 	Yn, norm_err_map = evaluate(sess, y, x, is_training, err_map, X_SA_tst, batch_size = 100)
+	Ya, anom_err_map = evaluate(sess, y, x, is_training, err_map, X_SP_tst, batch_size = 100)
 	Ya1, anom_err_map1 = evaluate(sess, y, x, is_training, err_map, X_SP_tst1, batch_size = 100)
 	Ya2, anom_err_map2 = evaluate(sess, y, x, is_training, err_map, X_SP_tst2, batch_size = 100)
 	Ya3, anom_err_map3 = evaluate(sess, y, x, is_training, err_map, X_SP_tst3, batch_size = 100)
@@ -151,4 +154,50 @@ with tf.Session() as sess:
 	plot_hist_list(result_folder+'/hist2-{}.png'.format(model_name), [recon_errs[:idx1], recon_errs[idx2:idx3]], ['Norm', 'Anomaly2'], ['g', 'b'], [max_value, min_value])
 	plot_hist_list(result_folder+'/hist3-{}.png'.format(model_name), [recon_errs[:idx1], recon_errs[idx3:]], ['Norm','Anomaly3'], ['g', 'y'], [max_value, min_value])
 	save_recon_images_v2(result_folder+'/recon-{}.png'.format(model_name), Xt, recons, err_maps, fig_size = [11,10])
-	
+	save_recon_images_v3(result_folder+'/recon_x4-{}.png'.format(model_name), X_SP_tst3, Ya3, anom_err_map3, fig_size = [11,20])
+	save_recon_images_v3(result_folder+'/recon_norm-{}.png'.format(model_name), X_SA_tst, Yn, norm_err_map, fig_size = [11,20])
+	err_distance = np.abs(norm_recon_errs-anom_recon_errs3)
+	err_distance_copy = np.copy(err_distance)
+	distance_map = np.abs(np.tile(norm_recon_errs.reshape(-1,1), (1, len(norm_recon_errs)))-np.tile(anom_recon_errs3.reshape(1,-1), (len(anom_recon_errs3), 1)))
+	distance_map_copy = np.copy(distance_map)
+	nb_select = 100
+	x_select_list, y_select_list = [], []
+	for i in range(nb_select):
+		x_indx, y_indx = np.where(distance_map_copy == np.min(distance_map_copy)); x_select_list.append(x_indx[0]); y_select_list.append(y_indx[0])
+		distance_map_copy[x_indx[0], y_indx[0]] = np.inf
+		print('Select {} {}-pair'.format(x_indx[0], y_indx[0]))
+	norm_images, anom_images = X_SA_tst[x_select_list,:], X_SP_tst[y_select_list,:]
+	save_recon_images_v4(result_folder+'/recon_close_err1-{}.png'.format(model_name), norm_images[:24,:], anom_images[:24,:], fig_size = [22,20])
+	save_recon_images_v4(result_folder+'/recon_close_err2-{}.png'.format(model_name), norm_images[24:48,:], anom_images[24:48,:], fig_size = [22,20])
+## test artifact with undersampling x4
+# anom_recon_errs = np.apply_over_axes(np.mean, norm_err_map, [1,2,3]).flatten()
+# max_value, min_value = np.min(np.concatenate([norm_recon_errs, anom_recon_errs])), np.max(np.concatenate([norm_recon_errs, anom_recon_errs]))
+# plot_hist_list(result_folder+'/hist0-{}.png'.format(model_name), [norm_recon_errs, anom_recon_errs], ['Norm', 'Artifact_x_4'], ['g', 'm'], [max_value, min_value])
+
+def evaluate_hidden(sess, y, h, x, is_training, err_map, X_tst, batch_size = 100):
+	h_list, y_list, err_map_list = [], [], []
+	i = 0
+	while batch_size*i < X_tst.shape[0]:
+		batch_x = X_tst[batch_size*i: min(batch_size*(i+1), X_tst.shape[0]),:]
+		y_recon = y.eval(session = sess, feed_dict = {x:batch_x,is_training: False})
+		h_out = h1.eval(session = sess, feed_dict = {x:batch_x,is_training: False})
+		y_list.append(y_recon); h_list.append(h_out)
+		err_map_list.append(err_map.eval(session = sess, feed_dict = {x:batch_x,is_training: False}))
+		i = i +1
+	y_arr, err_map_arr = np.concatenate(y_list, axis = 0), np.concatenate(err_map_list, axis = 0)
+	return y_arr, err_map_arr
+
+## evaluate the hiden layers
+with tf.Session() as sess:
+	tf.global_variables_initializer().run(session=sess)
+	saver.restore(sess, model_folder+'/best')
+	# norm
+	Yn, norm_err_map = evaluate(sess, y, x, is_training, err_map, X_SA_tst, batch_size = 100)
+	Ya, anom_err_map = evaluate(sess, y, x, is_training, err_map, X_SP_tst, batch_size = 100)
+	Ya1, anom_err_map1 = evaluate(sess, y, x, is_training, err_map, X_SP_tst1, batch_size = 100)
+	Ya2, anom_err_map2 = evaluate(sess, y, x, is_training, err_map, X_SP_tst2, batch_size = 100)
+	Ya3, anom_err_map3 = evaluate(sess, y, x, is_training, err_map, X_SP_tst3, batch_size = 100)
+	norm_recon_errs = np.apply_over_axes(np.mean, norm_err_map, [1,2,3]).flatten()
+	anom_recon_errs1 = np.apply_over_axes(np.mean, anom_err_map1, [1,2,3]).flatten()
+	anom_recon_errs2 = np.apply_over_axes(np.mean, anom_err_map2, [1,2,3]).flatten()
+	anom_recon_errs3 = np.apply_over_axes(np.mean, anom_err_map3, [1,2,3]).flatten()

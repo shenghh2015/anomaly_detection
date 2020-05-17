@@ -248,6 +248,55 @@ def save_recon_images_v2(img_file_name, imgs, recons, errs, fig_size):
 	canvas = FigureCanvasAgg(fig)
 	canvas.print_figure(img_file_name, dpi=100)
 
+def save_recon_images_v3(img_file_name, imgs, recons, errs, fig_size):
+	from matplotlib.backends.backend_agg import FigureCanvasAgg
+	from matplotlib.figure import Figure
+	imgs, recons, errs = np.squeeze(imgs), np.squeeze(recons), np.squeeze(errs)
+	test_size = imgs.shape[0]
+	rows, cols = 8, 3
+	indices = np.random.randint(0,int(test_size), rows)
+	f_arr = imgs[indices,:]
+	f_MP = recons[indices,:]
+	f_err = errs[indices,:]
+	fig_size = fig_size
+	fig = Figure(figsize=fig_size)
+	for i in range(rows):
+		ax = fig.add_subplot(rows, cols, i*cols + 1); cax=ax.imshow(f_arr[i,:],cmap='gray'); fig.colorbar(cax)
+		bx = fig.add_subplot(rows, cols, i*cols + 2); cbx=bx.imshow(f_MP[i,:],cmap='gray'); fig.colorbar(cbx)
+		cx = fig.add_subplot(rows, cols, i*cols + 3); ccx=cx.imshow(f_err[i,:],cmap='gray'); fig.colorbar(ccx)
+		if i == 0:
+			ax.set_title('Image')
+			bx.set_title('Recon')
+			cx.set_title('Error')
+	canvas = FigureCanvasAgg(fig)
+	canvas.print_figure(img_file_name, dpi=100)
+
+
+def save_recon_images_v4(img_file_name, imgs, recons, fig_size):
+	from matplotlib.backends.backend_agg import FigureCanvasAgg
+	from matplotlib.figure import Figure
+	imgs, recons = np.squeeze(imgs), np.squeeze(recons)
+	rows, cols = 8, 6
+	f_arr = imgs
+	f_MP = recons
+	fig = Figure(figsize=fig_size)
+	for i in range(rows):
+		for j in range(cols):
+			index = i*cols + j
+			ax = fig.add_subplot(rows, cols, index + 1)
+			if index%2 == 0:
+				cax=ax.imshow(f_arr[int(index/2),:],cmap='gray')
+				if i == 0:
+					ax.set_title('Normal')
+			else:
+				cax=ax.imshow(f_MP[int(index/2),:],cmap='gray')
+				if i == 0:
+					ax.set_title('Aftifact')
+			fig.colorbar(cax)
+	canvas = FigureCanvasAgg(fig)
+	canvas.print_figure(img_file_name, dpi=100)
+
+
 def generate_folder(folder):
 	if not os.path.exists(folder):
 		os.system('mkdir -p {}'.format(folder))
