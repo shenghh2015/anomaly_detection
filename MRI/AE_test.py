@@ -174,7 +174,7 @@ with tf.Session() as sess:
 # max_value, min_value = np.min(np.concatenate([norm_recon_errs, anom_recon_errs])), np.max(np.concatenate([norm_recon_errs, anom_recon_errs]))
 # plot_hist_list(result_folder+'/hist0-{}.png'.format(model_name), [norm_recon_errs, anom_recon_errs], ['Norm', 'Artifact_x_4'], ['g', 'm'], [max_value, min_value])
 
-def evaluate_hidden(sess, y, h, x, is_training, err_map, X_tst, batch_size = 100):
+def evaluate_hidden(sess, y, h1, x, is_training, err_map, X_tst, batch_size = 100):
 	h_list, y_list, err_map_list = [], [], []
 	i = 0
 	while batch_size*i < X_tst.shape[0]:
@@ -184,20 +184,43 @@ def evaluate_hidden(sess, y, h, x, is_training, err_map, X_tst, batch_size = 100
 		y_list.append(y_recon); h_list.append(h_out)
 		err_map_list.append(err_map.eval(session = sess, feed_dict = {x:batch_x,is_training: False}))
 		i = i +1
-	y_arr, err_map_arr = np.concatenate(y_list, axis = 0), np.concatenate(err_map_list, axis = 0)
-	return y_arr, err_map_arr
+	h_arr, y_arr, err_map_arr = np.concatenate(h_list, axis = 0), np.concatenate(y_list, axis = 0), np.concatenate(err_map_list, axis = 0)
+	return h_arr, y_arr, err_map_arr
 
-## evaluate the hiden layers
+## evaluate the norm of hiden features
 with tf.Session() as sess:
 	tf.global_variables_initializer().run(session=sess)
 	saver.restore(sess, model_folder+'/best')
 	# norm
-	Yn, norm_err_map = evaluate(sess, y, x, is_training, err_map, X_SA_tst, batch_size = 100)
-	Ya, anom_err_map = evaluate(sess, y, x, is_training, err_map, X_SP_tst, batch_size = 100)
-	Ya1, anom_err_map1 = evaluate(sess, y, x, is_training, err_map, X_SP_tst1, batch_size = 100)
-	Ya2, anom_err_map2 = evaluate(sess, y, x, is_training, err_map, X_SP_tst2, batch_size = 100)
-	Ya3, anom_err_map3 = evaluate(sess, y, x, is_training, err_map, X_SP_tst3, batch_size = 100)
-	norm_recon_errs = np.apply_over_axes(np.mean, norm_err_map, [1,2,3]).flatten()
-	anom_recon_errs1 = np.apply_over_axes(np.mean, anom_err_map1, [1,2,3]).flatten()
-	anom_recon_errs2 = np.apply_over_axes(np.mean, anom_err_map2, [1,2,3]).flatten()
-	anom_recon_errs3 = np.apply_over_axes(np.mean, anom_err_map3, [1,2,3]).flatten()
+	hn,  Yn, norm_err_map = evaluate_hidden(sess, y, h1, x, is_training, err_map, X_SA_tst, batch_size = 100)
+	ha,  Ya, anom_err_map = evaluate_hidden(sess, y, h1, x, is_training, err_map, X_SP_tst, batch_size = 100)
+	ha1, Ya1, anom_err_map1 = evaluate_hidden(sess, y, h1, x, is_training, err_map, X_SP_tst1, batch_size = 100)
+	ha2, Ya2, anom_err_map2 = evaluate_hidden(sess, y, h1, x, is_training, err_map, X_SP_tst2, batch_size = 100)
+	ha3, Ya3, anom_err_map3 = evaluate_hidden(sess, y, h1, x, is_training, err_map, X_SP_tst3, batch_size = 100)
+
+norm_recon_errs = np.apply_over_axes(np.mean, norm_err_map, [1,2,3]).flatten()
+anom_recon_errs1 = np.apply_over_axes(np.mean, anom_err_map1, [1,2,3]).flatten()
+anom_recon_errs2 = np.apply_over_axes(np.mean, anom_err_map2, [1,2,3]).flatten()
+anom_recon_errs3 = np.apply_over_axes(np.mean, anom_err_map3, [1,2,3]).flatten()
+hn_norm = np.linalg.norm(hn.reshape(hn.shape[0], -1), ord = 2, axis = 1)
+hn_anom = np.linalg.norm(ha.reshape(ha.shape[0], -1), ord = 2, axis = 1)
+hn_anom1 = np.linalg.norm(ha1.reshape(ha1.shape[0], -1), ord = 2, axis = 1)
+hn_anom2 = np.linalg.norm(ha2.reshape(ha2.shape[0], -1), ord = 2, axis = 1)
+hn_anom3 = np.linalg.norm(ha3.reshape(ha3.shape[0], -1), ord = 2, axis = 1)
+max_value, min_value = np.min(np.concatenate([hn_norm, hn_anom1, hn_anom2, hn_anom3])), np.max(np.concatenate([hn_norm, hn_anom1, hn_anom2, hn_anom3]))
+result_folder = model_folder + '/detection_results'
+plot_hist_list(result_folder+'/hist-norm1-{}.png'.format(model_name), [hn_norm, hn_anom1], ['Norm','Anomaly1'], ['g', 'r'], [max_value, min_value], xlabel = 'l2-norm')
+plot_hist_list(result_folder+'/hist-norm2-{}.png'.format(model_name), [hn_norm, hn_anom2], ['Norm','Anomaly2'], ['g', 'b'], [max_value, min_value], xlabel = 'l2-norm')
+plot_hist_list(result_folder+'/hist-norm3-{}.png'.format(model_name), [hn_norm, hn_anom3], ['Norm','Anomaly3'], ['g', 'y'], [max_value, min_value], xlabel = 'l2-norm')
+plot_hist_list(result_folder+'/hist-norm4-{}.png'.format(model_name), [hn_norm, hn_anom1, hn_anom2, hn_anom3], ['Norm','Anomaly1', 'Anomaly2', 'Anomaly3'], ['g','r','b','y'], [max_value, min_value], xlabel = 'l2-norm')
+
+## top 10 smallest reconstruction errs for a fixed f_meas
+anom_recon_errs1_copy = np.copy(anom_recon_errs1)
+nb_select = 10; index_list = []
+for i in range(nb_select):
+	min_index = np.argmin(anom_recon_errs1_copy); index_list.append(min_index); anom_recon_errs1_copy[min_index]= np.inf;
+selected_images = X_SP_tst1[index_list,:]
+dataset_folder = '/data/datasets/MRI'
+full_data = np.load(dataset_folder + '/axial_batch2_256x256.npy')
+true_image = full_data[66400,:]
+save_recon_images_v5(result_folder+'/recon_top_10_err-{}.png'.format(model_name), np.concatenate([true_image.reshape(1,256,256,1),selected_images]), fig_size = [18,14])

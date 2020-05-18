@@ -116,7 +116,7 @@ def plot_hist(file_name, x, y):
 	canvas = FigureCanvasAgg(fig)
 	canvas.print_figure(file_name, dpi=100)
 
-def plot_hist_list(file_name, stat_list, legend_list, color_list, range_tuple):
+def plot_hist_list(file_name, stat_list, legend_list, color_list, range_tuple, xlabel = 'Error'):
 	import matplotlib.pyplot as plt
 	from matplotlib.backends.backend_agg import FigureCanvasAgg
 	from matplotlib.figure import Figure
@@ -130,7 +130,7 @@ def plot_hist_list(file_name, stat_list, legend_list, color_list, range_tuple):
 		ax.hist(stat_list[i], **kwargs, color= color, label = legend_label)
 	title = os.path.basename(os.path.dirname(file_name))
 	ax.set_title(title)
-	ax.set_xlabel('Error')
+	ax.set_xlabel(xlabel)
 	ax.set_ylabel('Frequency')
 	ax.legend(legend_list)
 	ax.set_xlim(range_tuple)
@@ -296,6 +296,31 @@ def save_recon_images_v4(img_file_name, imgs, recons, fig_size):
 	canvas = FigureCanvasAgg(fig)
 	canvas.print_figure(img_file_name, dpi=100)
 
+def save_recon_images_v5(img_file_name, imgs, fig_size):
+	from matplotlib.backends.backend_agg import FigureCanvasAgg
+	from matplotlib.figure import Figure
+	imgs = np.squeeze(imgs)
+	rows, cols = 4, 4
+	f_arr = imgs
+	fig = Figure(figsize=fig_size)
+	index_img = 0
+	for i in range(rows):
+		for j in range(cols):
+			if i == 0 and j > 0:
+				continue
+			if index_img > 10:
+				continue
+			index = i*cols + j
+			ax = fig.add_subplot(rows, cols, index + 1)
+			cax=ax.imshow(f_arr[index_img,:],cmap='gray')
+			index_img = index_img + 1
+			if j == 0 and i == 0:
+				ax.set_ylabel('True Object')
+			elif j ==0 and i> 0:
+				ax.set_ylabel('f_meas+f_null')
+			fig.colorbar(cax)
+	canvas = FigureCanvasAgg(fig)
+	canvas.print_figure(img_file_name, dpi=100)
 
 def generate_folder(folder):
 	if not os.path.exists(folder):
