@@ -128,3 +128,67 @@ def auto_encoder(x, nb_cnn = 4, bn = False, bn_training = True, filters = 32, ke
 					kernel_initializer= 'truncated_normal', kernel_regularizer=l2_regularizer)
 		y = tf.nn.relu(y)
 	return h1, h2, y
+
+## auto-encoder version 3
+def conv_block2(x, nb_cnn = 4, bn = False, bn_training = True, filters = 32, kernel_size = [5,5], scope_name = 'encoder'):
+	with tf.variable_scope(scope_name):
+		h = _conv_bn_lrelu_pool(x, filters = filters, kernel_size = kernel_size, pool = True, bn = bn, bn_training = bn_training, scope = 'conv0')
+		for i in range(1, nb_cnn):
+			if i%2 == 1:
+				pool = True
+			else:
+				pool = True
+			h = _conv_bn_lrelu_pool(h, filters = filters, kernel_size = kernel_size, pool = pool, bn = bn, bn_training = bn_training, scope = 'conv{}'.format(i))
+	return h
+
+def up_conv_block2(x, nb_cnn = 4, bn = False, bn_training = True, filters = 32, kernel_size = [5,5], scope_name = 'decoder'):
+	with tf.variable_scope(scope_name):
+		h = _up_conv_bn_lrelu(x, filters = filters, kernel_size = kernel_size, up = True, bn = bn, bn_training = bn_training, scope = 'conv0')
+		for i in range(1, nb_cnn):
+			if i%2 == 1:
+				up = True
+			else:
+				up = True
+			h = _up_conv_bn_lrelu(h, filters = filters, kernel_size = kernel_size, up = up, bn = bn, bn_training = bn_training, scope = 'conv{}'.format(i))
+	return h
+
+def auto_encoder3(x, nb_cnn = 4, bn = False, bn_training = True, filters = 32, kernel_size = [5,5], scope_name = 'base', reuse = False):
+	with tf.variable_scope(scope_name, reuse = reuse):
+		h1 = conv_block2(x, nb_cnn = nb_cnn, bn = bn, bn_training = bn_training, filters = filters, kernel_size = kernel_size, scope_name = 'encoder')
+		h2 = up_conv_block2(h1, nb_cnn = nb_cnn, bn = bn, bn_training = bn_training, filters = filters, kernel_size = kernel_size, scope_name = 'decoder')
+		y = tf.layers.conv2d(h2, filters = 1, kernel_size = kernel_size, strides=(1, 1), padding='same',
+					kernel_initializer= 'truncated_normal', kernel_regularizer=l2_regularizer)
+		y = tf.nn.relu(y)
+	return h1, h2, y
+
+# scope = 'base'
+# tf.keras.backend.clear_session()
+# x = tf.placeholder("float", shape=[None, img_size, img_size, 1])
+# is_training = tf.placeholder_with_default(False, (), 'is_training')
+# tf.keras.backend.clear_session()
+
+## auto-encoder version 4
+def auto_encoder4(x, nb_cnn = 4, bn = False, bn_training = False, filters = 32, hidden = 1024, kernel_size = [5,5], scope_name = 'base', reuse = False):
+	with tf.variable_scope(scope_name, reuse = reuse):
+		h1 = conv_block2(x, nb_cnn = nb_cnn, bn = bn, bn_training = bn_training, filters = filters, kernel_size = kernel_size, scope_name = 'encoder')
+		flat1 = tf.layers.flatten(h1)
+		flat_len = flat1.get_shape().as_list()[-1]
+		flat2 = tf.layers.dense(flat1, hidden, kernel_regularizer=l2_regularizer)
+		if bn:
+			_bn = bn_layer_top(flat2, 'dense_1', is_training = bn_training, epsilon=0.001, decay=0.99)
+		else:
+			_bn = flat2
+		_lrelu = tf.nn.leaky_relu(_bn)
+		flat3 = tf.layers.dense(_lrelu, flat_len, kernel_regularizer=l2_regularizer)
+		if bn:
+			_bn = bn_layer_top(flat3, 'dense_2', is_training = bn_training, epsilon=0.001, decay=0.99)
+		else:
+			_bn = flat3
+		_lrelu = tf.nn.leaky_relu(_bn)
+		hx = tf.reshape(_lrelu, tf.shape(h1))
+		h2 = up_conv_block2(hx, nb_cnn = nb_cnn, bn = bn, bn_training = bn_training, filters = filters, kernel_size = kernel_size, scope_name = 'decoder')
+		y = tf.layers.conv2d(h2, filters = 1, kernel_size = kernel_size, strides=(1, 1), padding='same',
+					kernel_initializer= 'truncated_normal', kernel_regularizer=l2_regularizer)
+		y = tf.nn.relu(y)
+
+	return h1, h2, y

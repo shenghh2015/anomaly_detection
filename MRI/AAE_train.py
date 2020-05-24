@@ -89,9 +89,7 @@ is_training = tf.placeholder_with_default(False, (), 'is_training')
 if version == 1 or version ==2:
 	h1, h2, y = auto_encoder(x, nb_cnn = nb_cnn, bn = batch_norm, bn_training = is_training, filters = filters, kernel_size = [kernel_size, kernel_size], scope_name = scope)
 elif version == 3:
-	h1, h2, y = auto_encoder3(x, nb_cnn = nb_cnn, bn = batch_norm, bn_training = is_training, filters = filters, kernel_size = [kernel_size, kernel_size], scope_name = scope)
-elif version == 4:
-	h1, h2, y = auto_encoder4(x, nb_cnn = nb_cnn, bn = batch_norm, bn_training = is_training, filters = filters, kernel_size = [kernel_size, kernel_size], scope_name = scope)
+	h1, h2, y = auto_encoder2(x, nb_cnn = nb_cnn, bn = batch_norm, filters = filters, kernel_size = [kernel_size, kernel_size], scope_name = scope)
 
 # create a saver
 key_direct = {}; vars_list = tf.global_variables(scope); key_list = [v.name[:-2] for v in tf.global_variables(scope)]
