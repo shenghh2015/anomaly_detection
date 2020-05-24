@@ -14,7 +14,7 @@ import scipy.misc as misc
 
 from load_data import *
 # from models import *
-from models2 import auto_encoder
+from models2 import auto_encoder, auto_encoder3, auto_encoder4
 from helper_function import normalize_0_1, print_yellow, print_red, print_green, print_block
 from helper_function import plot_hist, plot_LOSS, plot_AUC, plot_hist_pixels
 from helper_function import generate_folder, save_recon_images
