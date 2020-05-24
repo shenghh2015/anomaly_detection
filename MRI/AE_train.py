@@ -106,6 +106,8 @@ if loss == 'mse':
 elif loss == 'correntropy':
 	sigma = 0.1
 	err_map = -tf.exp(-tf.square(x - y)/sigma)
+elif loss == 'mae':
+	err_map = tf.abs(y - x)
 
 # loss function
 err_mean = tf.reduce_mean(err_map, [1,2,3]); cost = tf.reduce_mean(err_mean)
