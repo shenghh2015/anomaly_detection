@@ -37,6 +37,9 @@
 # JOB: python SAE.py --gpu 0 --cn1 4 --cn2 4 --fr 32 --ks 3 --bn True --lr 1e-4 --step 300000 --bz 50 --train 20000 --val 200 --test 200 --noise 80 --version 2 --loss1 mse --loss2 mse
 
 # python noiseAE.py --gpu 0 --cn 4 --fr 32 --ks 5 --bn True --lr 1e-4 --step 200000 --bz 50 --train 65000 --val 200 --test 200 --noise_level 0 --us_factor 4 --version 2
-JOB: python AE_train.py --gpu 1 --cn 5 --fr 32 --ks 5 --bn False --lr 1e-4 --step 100000 --bz 50 --version 4 --train 65000 --val 400 --test 1000 --loss 'mae'
-
+# JOB: python AE_train.py --gpu 1 --cn 5 --fr 32 --ks 5 --bn False --lr 1e-4 --step 100000 --bz 50 --version 4 --train 65000 --val 400 --test 1000 --loss 'mae'
+# JOB: python AE_train.py --gpu 0 --cn 5 --fr 32 --ks 5 --bn False --lr 1e-4 --step 100000 --bz 50 --version 4 --train 65000 --val 400 --test 1000 --loss 'mse'
+JOB: python AE_train.py --gpu 0 --cn 4 --fr 32 --ks 5 --bn False --lr 1e-4 --step 100000 --bz 50 --version 2 --train 65000 --val 400 --test 1000 --loss 'mae'
+JOB: python AE_train.py --gpu 1 --cn 4 --fr 32 --ks 5 --bn False --lr 1e-4 --step 100000 --bz 50 --version 3 --train 65000 --val 400 --test 1000 --loss 'mae'
 # JOB: python AE_train.py --gpu 1 --cn 6 --fr 32 --ks 5 --bn False --lr 1e-4 --step 100000 --bz 50 --version 4 --train 65000 --val 400 --test 1000 --loss 'mae'
+# JOB: python AE_train.py --gpu 0 --cn 4 --fr 32 --ks 5 --bn False --lr 1e-4 --step 100000 --bz 50 --version 4 --train 65000 --val 400 --test 1000 --loss 'mae'
