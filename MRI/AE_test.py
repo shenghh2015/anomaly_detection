@@ -13,10 +13,10 @@ import scipy.io
 import scipy.misc as misc
 
 from load_data import load_MRI_anomaly
-from models2 import auto_encoder
+from models2 import auto_encoder, auto_encoder3, auto_encoder4
 from helper_function import normalize_0_1, print_yellow, print_red, print_green, print_block
 from helper_function import plot_hist, plot_LOSS, plot_AUC, plot_hist_pixels, plot_hist_list
-from helper_function import generate_folder, save_recon_images, save_recon_images_v2
+from helper_function import generate_folder, save_recon_images, save_recon_images_v2, save_recon_images_v3, save_recon_images_v4 
 
 ## functions
 def str2bool(value):
@@ -32,7 +32,8 @@ else:
 	output_folder = './data/MRI'
 
 # model_name = 'AE1-MRI-cn-6-fr-32-ks-5-bn-False-lr-0.0001-stps-100000-bz-50-tr-65k-vl-400-test-1000-l-mse'
-model_name = 'AE1-MRI-cn-4-fr-32-ks-5-bn-False-lr-0.0001-stps-100000-bz-50-tr-65k-vl-400-test-1000-l-mse'
+# model_name = 'AE1-MRI-cn-4-fr-32-ks-5-bn-False-lr-0.0001-stps-100000-bz-50-tr-65k-vl-400-test-1000-l-mse'
+model_name = 'AE4-MRI-cn-6-fr-32-ks-5-bn-False-lr-0.0001-stps-100000-bz-50-tr-65k-vl-400-test-1000-l-mae'
 
 splits = model_name.split('-')
 if len(splits[0])<=2:
@@ -59,6 +60,9 @@ for i in range(len(splits)):
 		test = int(splits[i+1])
 	elif splits[i] == 'n' or splits[i]=='NL':
 		noise = float(splits[i+1])
+	elif splits[i] == 'l':
+		loss = splits[i+1]
+
 
 model_folder = os.path.join(output_folder, model_name)
 
@@ -85,11 +89,17 @@ scope = 'base'
 x = tf.placeholder("float", shape=[None, 256, 256, 1])
 is_training = tf.placeholder_with_default(False, (), 'is_training')
 
-if version == 1:
+if version == 1 or version == 2:
 	h1, h2, y = auto_encoder(x, nb_cnn = nb_cnn, bn = batch_norm, bn_training = is_training, filters = filters, kernel_size = [kernel_size, kernel_size], scope_name = scope)
-elif version == 2:
-	h1, h2, y = auto_encoder(x, nb_cnn = nb_cnn, bn = batch_norm, bn_training = is_training, filters = filters, kernel_size = [kernel_size, kernel_size], scope_name = scope)
-err_map = tf.square(y - x)
+elif version == 3:
+	h1, h2, y = auto_encoder3(x, nb_cnn = nb_cnn, bn = batch_norm, bn_training = is_training, filters = filters, kernel_size = [kernel_size, kernel_size], scope_name = scope)
+elif version == 4:
+	h1, h2, y = auto_encoder4(x, nb_cnn = nb_cnn, bn = batch_norm, bn_training = is_training, filters = filters, kernel_size = [kernel_size, kernel_size], scope_name = scope)
+
+if loss == 'mse':
+	err_map = tf.square(y - x)
+elif loss == 'mae':
+	err_map = tf.abs(y - x)
 
 # tf.keras.backend.clear_session()
 # create a saver
