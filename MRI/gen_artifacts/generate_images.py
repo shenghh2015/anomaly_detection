@@ -16,7 +16,7 @@ args = parser.parse_args()
 print(args)
 
 us_factor = args.us_factor
-if us_factor == 1 or us_factor == 2 or us_factor == 4:
+if us_factor == 1 or us_factor == 2 or us_factor == 3 or us_factor == 4:
 	us_factor = int(us_factor)
 noise_level = args.noise_level
 docker = True
