@@ -68,10 +68,11 @@ model_folder = os.path.join(output_folder, model_name)
 
 ## load data
 print_red('Data loading ...')
+version1, version2, version3, version4 = 0, 1, 4, 5
 _, _, _, X_SP_tst = load_MRI_anomaly(docker = docker, train = train, val = val, normal = test, anomaly = test, version = 0)
 _, _, X_SA_tst, X_SP_tst1 = load_MRI_anomaly(docker = docker, train = train, val = val, normal = test, anomaly = test, version = 1)
 _, _, _, X_SP_tst2 = load_MRI_anomaly(docker = docker, train = train, val = val, normal = test, anomaly = test, version = 2)
-_, _, _, X_SP_tst3 = load_MRI_anomaly(docker = docker, train = train, val = val, normal = test, anomaly = test, version = 3)
+_, _, _, X_SP_tst3 = load_MRI_anomaly(docker = docker, train = train, val = val, normal = test, anomaly = test, version = )
 X_SA_tst, X_SP_tst1, X_SP_tst2, X_SP_tst3 = normalize_0_1(X_SA_tst), normalize_0_1(X_SP_tst1), normalize_0_1(X_SP_tst2), normalize_0_1(X_SP_tst3)
 X_SP_tst = normalize_0_1(X_SP_tst)
 ## test data
@@ -161,11 +162,11 @@ with tf.Session() as sess:
 	err_stat_list = [recon_errs[:idx], recon_errs[idx:idx1], recon_errs[idx1:idx2], recon_errs[idx2:idx3],recon_errs[idx3:]]
 	min_value, max_value = np.min(recon_errs), np.max(recon_errs)
 	print_green('Length: norm {} anom1 {} anom2 {} anom3 {}'.format(len(recon_errs[:idx1]), len(recon_errs[idx1:idx2]), len(recon_errs[idx2:idx3]), len(recon_errs[idx3:])))
-	plot_hist_list(result_folder+'/hist-{}.png'.format(model_name), err_stat_list, ['Norm', 'Ano-fact4', 'Ano-fact2', 'Ano-fact2-mix', 'Ano-fact4-mix'], ['g', 'c', 'r', 'b', 'y'], [min_value, max_value])
-	plot_hist_list(result_folder+'/hist0-{}.png'.format(model_name), [recon_errs[:idx], recon_errs[idx:idx1]], ['Norm', 'Ano-fact4'], ['g', 'c'], [min_value, max_value])
-	plot_hist_list(result_folder+'/hist1-{}.png'.format(model_name), [recon_errs[:idx], recon_errs[idx1:idx2]], ['Norm', 'Ano-fact2'], ['g', 'r'], [min_value, max_value])
-	plot_hist_list(result_folder+'/hist2-{}.png'.format(model_name), [recon_errs[:idx], recon_errs[idx2:idx3]], ['Norm', 'Ano-fact2-mix'], ['g', 'b'], [min_value, max_value])
-	plot_hist_list(result_folder+'/hist3-{}.png'.format(model_name), [recon_errs[:idx], recon_errs[idx3:]], ['Norm','Ano-fact4-mix'], ['g', 'y'], [min_value, max_value])
+	plot_hist_list(result_folder+'/hist-d-norm-{}.png'.format(model_name), err_stat_list, ['Norm', 'Ano-fact4', 'Ano-fact2', 'Ano-fact2-mix', 'Ano-fact4-mix'], ['g', 'c', 'r', 'b', 'y'], [min_value, max_value])
+	plot_hist_list(result_folder+'/hist0-{}-{}.png'.format(version1, model_name), [recon_errs[:idx], recon_errs[idx:idx1]], ['Norm', 'Ano-fact4'], ['g', 'c'], [min_value, max_value])
+	plot_hist_list(result_folder+'/hist1-{}-{}.png'.format(version2, model_name), [recon_errs[:idx], recon_errs[idx1:idx2]], ['Norm', 'Ano-fact2'], ['g', 'r'], [min_value, max_value])
+	plot_hist_list(result_folder+'/hist2-{}-{}.png'.format(version3, model_name), [recon_errs[:idx], recon_errs[idx2:idx3]], ['Norm', 'Ano-fact2-mix'], ['g', 'b'], [min_value, max_value])
+	plot_hist_list(result_folder+'/hist3-{}-{}.png'.format(version4, model_name), [recon_errs[:idx], recon_errs[idx3:]], ['Norm','Ano-fact4-mix'], ['g', 'y'], [min_value, max_value])
 	save_recon_images_v2(result_folder+'/recon-{}.png'.format(model_name), Xt, recons, err_maps, fig_size = [11,10])
 	save_recon_images_v3(result_folder+'/recon_x4-meas{}.png'.format(model_name), X_SP_tst, Ya, anom_err_map, fig_size = [11,20])
 	save_recon_images_v3(result_folder+'/recon_x4-mix{}.png'.format(model_name), X_SP_tst3, Ya3, anom_err_map3, fig_size = [11,20])

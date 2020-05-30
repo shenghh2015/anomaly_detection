@@ -66,6 +66,12 @@ def load_MRI_anomaly(docker = False, train = 65000, val = 200, normal = 1000, an
 		img_MP =  np.load(os.path.join(dataset_folder, 'axial_batch2_256x256_test_null_mixed_mask_2x_1000.npy'))
 	elif version == 3:
 		img_MP =  np.load(os.path.join(dataset_folder, 'axial_batch2_256x256_test_null_mixed_mask_4x_1000.npy'))
+	elif version == 4:
+		img_MP =  np.load(os.path.join(dataset_folder, 'axial_batch2_256x256_artifact-2_noise-0.0.npy'))
+		img_MP = img_MP[-1000:,:]
+	elif version == 5:
+		img_MP =  np.load(os.path.join(dataset_folder, 'axial_batch2_256x256_artifact-3_noise-0.0.npy'))
+		img_MP = img_MP[-1000:,:]
 	X_trn, X_val, X_n, X_a = img[:train,:], img[65000:65000+val,:], img[-1000:,:], img_MP
 	if False:
 		plot_image_pair(dataset_folder+'/image_f_meas_null.png', X_n, X_a, [8,5])
