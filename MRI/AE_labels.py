@@ -114,7 +114,7 @@ err_mean = tf.reduce_mean(err_map, [1,2,3]); cost = tf.reduce_mean(err_mean)
 # update_ops = tf.get_collection(tf.GraphKeys.UPDATE_OPS)
 # with tf.control_dependencies(update_ops):
 trn_norm_step = tf.train.AdamOptimizer(lr).minimize(cost, var_list= tf.trainable_variables(scope))
-trn_ano_step = tf.train.AdamOptimizer(lr).minimize(-cost, var_list= tf.trainable_variables(scope))
+trn_ano_step = tf.train.AdamOptimizer(lr*.1).minimize(-cost, var_list= tf.trainable_variables(scope))
 
 # save the results for the methods by use of mean of pixels
 Xt = np.expand_dims(np.concatenate([Xn_tst, Xa_tst], axis = 0), axis = 3)
@@ -145,9 +145,10 @@ with tf.Session() as sess:
 	tf.global_variables_initializer().run(session=sess)
 	for iteration in range(nb_steps):
 		indices = np.random.randint(0, Xn_trn.shape[0]-1, batch_size)
+		indice_xa = np.random.randint(0, Xa_trn.shape[0]-1, batch_size)
 		# train with batches
 		batch_x = Xn_trn[indices,:]; sess.run(trn_norm_step, feed_dict={x: batch_x,is_training: True})
-		batch_xa = Xa_trn[indices,:]; sess.run(trn_ano_step, feed_dict={x: batch_xa,is_training: True})
+		batch_xa = Xa_trn[indice_xa,:]; sess.run(trn_ano_step, feed_dict={x: batch_xa,is_training: True})
 		if iteration%100 == 0:
 			loss_trn = cost.eval(session = sess, feed_dict = {x:batch_x,is_training: False})
 			Yn, norm_err_map, loss_norm = evaluate(sess, y, x, is_training, err_map, cost, Xn_tst)
