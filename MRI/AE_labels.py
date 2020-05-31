@@ -66,7 +66,7 @@ else:
 	output_folder = './data/MRI'
 
 ## model folder
-model_name = 'AE{}-{}-cn-{}-fr-{}-ks-{}-bn-{}-lr-{}-stps-{}-bz-{}-tr-{}k-vl-{}-test-{}-l-{}'.format(version, os.path.basename(output_folder), nb_cnn, filters, kernel_size, batch_norm, lr, nb_steps, batch_size, int(train/1000), val, test, loss)
+model_name = 'AEL{}-{}-cn-{}-fr-{}-ks-{}-bn-{}-lr-{}-stps-{}-bz-{}-tr-{}k-vl-{}-test-{}-l-{}'.format(version, os.path.basename(output_folder), nb_cnn, filters, kernel_size, batch_norm, lr, nb_steps, batch_size, int(train/1000), val, test, loss)
 model_folder = os.path.join(output_folder, model_name)
 generate_folder(model_folder)
 
@@ -74,7 +74,7 @@ generate_folder(model_folder)
 img_size = 256
 ## load dataset
 print_red('Data loading ...')
-Xn_trn, Xn_val, Xn_tst, Xa_trn, Xa_tst = load_MRI_anomaly_labels(docker = docker, train = train, val = val, normal = test, anomaly = test, version = 4)
+Xn_trn, Xn_val, Xn_tst, Xa_trn, Xa_tst = load_MRI_anomaly_labels(docker = docker, train = train, val = val, normal = test, anomaly = test, version = 0)
 print_red('Data 0-1 normalization ...')
 Xn_trn, Xn_val, Xn_tst, Xa_trn, Xa_tst = normalize_0_1(Xn_trn), normalize_0_1(Xn_val), normalize_0_1(Xn_tst), normalize_0_1(Xa_trn), normalize_0_1(Xa_tst)
 ## Dimension adjust
