@@ -31,6 +31,7 @@ parser.add_argument("--bn", type=str2bool, default = True)
 parser.add_argument("--fr", type=int, default = 32)
 parser.add_argument("--ks", type=int, default = 5)
 parser.add_argument("--lr", type=float, default = 1e-5)
+parser.add_argument("--ano_weigth", type=float, default = 0.1)
 parser.add_argument("--step", type=int, default = 1000)
 parser.add_argument("--bz", type=int, default = 50)
 parser.add_argument("--train", type=int, default = 65000)
@@ -57,6 +58,7 @@ val = args.val
 test = args.test
 version = args.version
 loss = args.loss
+ano_weigth = args.ano_weigth
 
 os.environ["CUDA_VISIBLE_DEVICES"] = str(gpu)
 
@@ -114,7 +116,7 @@ err_mean = tf.reduce_mean(err_map, [1,2,3]); cost = tf.reduce_mean(err_mean)
 # update_ops = tf.get_collection(tf.GraphKeys.UPDATE_OPS)
 # with tf.control_dependencies(update_ops):
 trn_norm_step = tf.train.AdamOptimizer(lr).minimize(cost, var_list= tf.trainable_variables(scope))
-trn_ano_step = tf.train.AdamOptimizer(lr*.1).minimize(-cost, var_list= tf.trainable_variables(scope))
+trn_ano_step = tf.train.AdamOptimizer(lr*ano_weigth).minimize(-cost, var_list= tf.trainable_variables(scope))
 
 # save the results for the methods by use of mean of pixels
 Xt = np.expand_dims(np.concatenate([Xn_tst, Xa_tst], axis = 0), axis = 3)
@@ -170,7 +172,8 @@ with tf.Session() as sess:
 			print_yellow('LOSS: T {0:.4f}, V {1:.4f}, Norm {2:.4f}, Anomaly {3:.4f}; AUC: AE {4:.4f}, M: {5:.4f}; iter {6:}'.\
 					format(loss_trn, loss_val, loss_norm, loss_anomaly, AE_auc, MP_auc, iteration))
 			# save model
-# 			saver.save(sess, model_folder +'/model', global_step= iteration)
+			if iteration%10000 == 0
+				saver.save(sess, model_folder +'/model', global_step= iteration)
 			# save results
 			loss_trn_list, loss_val_list, loss_norm_list, loss_anomaly_list, auc_list =\
 				np.append(loss_trn_list, loss_trn), np.append(loss_val_list, loss_val),\
