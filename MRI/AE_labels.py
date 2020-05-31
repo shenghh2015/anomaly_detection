@@ -172,7 +172,7 @@ with tf.Session() as sess:
 			print_yellow('LOSS: T {0:.4f}, V {1:.4f}, Norm {2:.4f}, Anomaly {3:.4f}; AUC: AE {4:.4f}, M: {5:.4f}; iter {6:}'.\
 					format(loss_trn, loss_val, loss_norm, loss_anomaly, AE_auc, MP_auc, iteration))
 			# save model
-			if iteration%10000 == 0
+			if iteration%10000 == 0:
 				saver.save(sess, model_folder +'/model', global_step= iteration); print_red('Update model')
 			# save results
 			loss_trn_list, loss_val_list, loss_norm_list, loss_anomaly_list, auc_list =\
