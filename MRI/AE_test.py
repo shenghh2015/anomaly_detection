@@ -69,10 +69,10 @@ model_folder = os.path.join(output_folder, model_name)
 ## load data
 print_red('Data loading ...')
 version1, version2, version3, version4 = 0, 1, 4, 5
-_, _, _, X_SP_tst = load_MRI_anomaly(docker = docker, train = train, val = val, normal = test, anomaly = test, version = 0)
-_, _, X_SA_tst, X_SP_tst1 = load_MRI_anomaly(docker = docker, train = train, val = val, normal = test, anomaly = test, version = 1)
-_, _, _, X_SP_tst2 = load_MRI_anomaly(docker = docker, train = train, val = val, normal = test, anomaly = test, version = 2)
-_, _, _, X_SP_tst3 = load_MRI_anomaly(docker = docker, train = train, val = val, normal = test, anomaly = test, version = )
+_, _, _, X_SP_tst = load_MRI_anomaly(docker = docker, train = train, val = val, normal = test, anomaly = test, version = version1)
+_, _, X_SA_tst, X_SP_tst1 = load_MRI_anomaly(docker = docker, train = train, val = val, normal = test, anomaly = test, version = version2)
+_, _, _, X_SP_tst2 = load_MRI_anomaly(docker = docker, train = train, val = val, normal = test, anomaly = test, version = version3)
+_, _, _, X_SP_tst3 = load_MRI_anomaly(docker = docker, train = train, val = val, normal = test, anomaly = test, version = version4)
 X_SA_tst, X_SP_tst1, X_SP_tst2, X_SP_tst3 = normalize_0_1(X_SA_tst), normalize_0_1(X_SP_tst1), normalize_0_1(X_SP_tst2), normalize_0_1(X_SP_tst3)
 X_SP_tst = normalize_0_1(X_SP_tst)
 ## test data
