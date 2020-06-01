@@ -38,6 +38,7 @@ parser.add_argument("--train", type=int, default = 65000)
 parser.add_argument("--val", type=int, default = 200)
 parser.add_argument("--test", type=int, default = 200)
 parser.add_argument("--version", type=int, default = 1)
+parser.add_argument("--anomaly", type=str, default = '4x')
 parser.add_argument("--loss", type = str, default = 'mse')
 
 
@@ -59,6 +60,7 @@ test = args.test
 version = args.version
 loss = args.loss
 ano_weight = args.ano_weight
+anomaly = args.anomaly
 
 os.environ["CUDA_VISIBLE_DEVICES"] = str(gpu)
 
@@ -68,7 +70,7 @@ else:
 	output_folder = './data/MRI'
 
 ## model folder
-model_name = 'AEL{}-{}-cn-{}-fr-{}-ks-{}-bn-{}-lr-{}-stps-{}-bz-{}-tr-{}k-vl-{}-test-{}-l-{}-ano_w-{}'.format(version, os.path.basename(output_folder), nb_cnn, filters, kernel_size, batch_norm, lr, nb_steps, batch_size, int(train/1000), val, test, loss, ano_weight)
+model_name = 'AEL{}-{}-cn-{}-fr-{}-ks-{}-bn-{}-lr-{}-stps-{}-bz-{}-tr-{}k-vl-{}-test-{}-l-{}-ano_w-{}-{}'.format(version, os.path.basename(output_folder), nb_cnn, filters, kernel_size, batch_norm, lr, nb_steps, batch_size, int(train/1000), val, test, loss, ano_weight, anomaly)
 model_folder = os.path.join(output_folder, model_name)
 generate_folder(model_folder)
 
@@ -76,7 +78,14 @@ generate_folder(model_folder)
 img_size = 256
 ## load dataset
 print_red('Data loading ...')
-Xn_trn, Xn_val, Xn_tst, Xa_trn, Xa_tst = load_MRI_anomaly_labels(docker = docker, train = train, val = val, normal = test, anomaly = test, version = 0)
+if anomaly == '4x':
+	dataset_version = 0
+elif anomaly == '2x':
+	dataset_version = 4
+elif anomaly == '3x':
+	dataset_version = 5
+
+Xn_trn, Xn_val, Xn_tst, Xa_trn, Xa_tst = load_MRI_anomaly_labels(docker = docker, train = train, val = val, normal = test, anomaly = test, version = dataset_version)
 print_red('Data 0-1 normalization ...')
 Xn_trn, Xn_val, Xn_tst, Xa_trn, Xa_tst = normalize_0_1(Xn_trn), normalize_0_1(Xn_val), normalize_0_1(Xn_tst), normalize_0_1(Xa_trn), normalize_0_1(Xa_tst)
 ## Dimension adjust

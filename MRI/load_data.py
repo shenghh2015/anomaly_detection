@@ -111,7 +111,7 @@ def load_MRI_anomaly_labels(docker = False, train = 65000, val = 200, normal = 1
 	elif version == 5:
 		img_MP =  np.load(os.path.join(dataset_folder, 'axial_batch2_256x256_artifact-3_noise-0.0.npy'))
 # 		img_MP = img_MP[-1000:,:]
-	Xn_trn, Xn_val, Xn_tst, Xa_trn, Xa_tst = img[:train,:], img[65000:65000+val,:], img[-1000:,:], img_MP[:train], img_MP[-1000:,:]
+	Xn_trn, Xn_val, Xn_tst, Xa_trn, Xa_tst = img[:train,:], img[65000:65000+val,:], img[-1000:,:], img_MP[:train,:], img_MP[-1000:,:]
 	if False:
 		plot_image_pair(dataset_folder+'/image_f_meas_null.png', Xn_tst, Xa_tst, [8,5])
 	return Xn_trn, Xn_val, Xn_tst, Xa_trn, Xa_tst
