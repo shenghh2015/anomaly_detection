@@ -11,8 +11,9 @@ import argparse
 from sklearn.metrics import roc_auc_score
 import scipy.io
 import scipy.misc as misc
+import matplotlib
 
-from load_data import load_MRI_anomaly
+from load_data import load_MRI_anomaly, load_MRI_anomaly_test
 from models2 import auto_encoder, auto_encoder3, auto_encoder4
 from helper_function import normalize_0_1, print_yellow, print_red, print_green, print_block
 from helper_function import plot_hist, plot_LOSS, plot_AUC, plot_hist_pixels, plot_hist_list
@@ -33,13 +34,15 @@ else:
 
 # model_name = 'AE1-MRI-cn-6-fr-32-ks-5-bn-False-lr-0.0001-stps-100000-bz-50-tr-65k-vl-400-test-1000-l-mse'
 # model_name = 'AE1-MRI-cn-4-fr-32-ks-5-bn-False-lr-0.0001-stps-100000-bz-50-tr-65k-vl-400-test-1000-l-mse'
-model_name = 'AE4-MRI-cn-6-fr-32-ks-5-bn-False-lr-0.0001-stps-100000-bz-50-tr-65k-vl-400-test-1000-l-mae'
+# model_name = 'AE4-MRI-cn-6-fr-32-ks-5-bn-False-lr-0.0001-stps-100000-bz-50-tr-65k-vl-400-test-1000-l-mae'
+# model_name = 'AEL3-MRI-cn-4-fr-32-ks-5-bn-False-lr-0.0001-stps-100000-bz-50-tr-65k-vl-400-test-1000-l-mae'
+model_name = 'AEL1-MRI-cn-4-fr-32-ks-5-bn-True-lr-1e-06-stps-100000-bz-50-tr-65k-vl-400-test-1000-l-mae-ano_w-0.05'
 
 splits = model_name.split('-')
 if len(splits[0])<=2:
 	version =1
 else:
-	version = int(splits[0][2])
+	version = int(splits[0][-1])
 for i in range(len(splits)):
 	if splits[i] == 'cn':
 		nb_cnn = int(splits[i+1])
@@ -84,6 +87,8 @@ X_SA_tst, X_SP_tst1, X_SP_tst2, X_SP_tst3, Xt = np.expand_dims(X_SA_tst, axis = 
 		 np.expand_dims(X_SP_tst3, axis = 3), np.expand_dims(Xt, axis = 3)
 print_red('Data Loaded !')
 
+Xa = load_MRI_anomaly_test(dataset = 'null_mixed_4x'); Xa = normalize_0_1(Xa); Xa = np.expand_dims(Xa, axis = 3)
+
 # batch_norm = True 
 bn_training = False
 scope = 'base'
@@ -127,26 +132,33 @@ def evaluate(sess, y, x, is_training, err_map, X_tst, batch_size = 100):
 	y_arr, err_map_arr = np.concatenate(y_list, axis = 0), np.concatenate(err_map_list, axis = 0)
 	return y_arr, err_map_arr
 
+
+
 # evaluate the reconstruction errs
 with tf.Session() as sess:
 	tf.global_variables_initializer().run(session=sess)
-	saver.restore(sess, model_folder+'/best')
+# 	saver.restore(sess, model_folder+'/best')
+	saver.restore(sess, model_folder+'/model-40000')
 	# norm
 	Yn, norm_err_map = evaluate(sess, y, x, is_training, err_map, X_SA_tst, batch_size = 100)
 	Ya, anom_err_map = evaluate(sess, y, x, is_training, err_map, X_SP_tst, batch_size = 100)
 	Ya1, anom_err_map1 = evaluate(sess, y, x, is_training, err_map, X_SP_tst1, batch_size = 100)
 	Ya2, anom_err_map2 = evaluate(sess, y, x, is_training, err_map, X_SP_tst2, batch_size = 100)
 	Ya3, anom_err_map3 = evaluate(sess, y, x, is_training, err_map, X_SP_tst3, batch_size = 100)
+	Ya4, anom_err_map4 = evaluate(sess, y, x, is_training, err_map, Xa, batch_size = 100)
+	
 	norm_recon_errs = np.apply_over_axes(np.mean, norm_err_map, [1,2,3]).flatten()
 	anom_recon_errs = np.apply_over_axes(np.mean, anom_err_map, [1,2,3]).flatten()
 	anom_recon_errs1 = np.apply_over_axes(np.mean, anom_err_map1, [1,2,3]).flatten()
 	anom_recon_errs2 = np.apply_over_axes(np.mean, anom_err_map2, [1,2,3]).flatten()
 	anom_recon_errs3 = np.apply_over_axes(np.mean, anom_err_map3, [1,2,3]).flatten()
+	anom_recon_errs4 = np.apply_over_axes(np.mean, anom_err_map4, [1,2,3]).flatten()
 	
 	imgs = np.concatenate([X_SA_tst, X_SP_tst1, X_SP_tst2, X_SP_tst3], axis = 0)
 	recons = np.concatenate([Yn, Ya1, Ya2, Ya3], axis = 0)
 	err_maps = np.concatenate([norm_err_map, anom_err_map, anom_err_map1, anom_err_map2, anom_err_map3], axis = 0)
 	recon_errs = np.concatenate([norm_recon_errs, anom_recon_errs, anom_recon_errs1, anom_recon_errs2, anom_recon_errs3], axis = 0)
+	total_errs = np.concatenate([norm_recon_errs, anom_recon_errs, anom_recon_errs1, anom_recon_errs2, anom_recon_errs3, anom_recon_errs4], axis = 0)
 # 	recon_errs = np.apply_over_axes(np.mean, err_maps, [1,2,3]).flatten()
 # 	print_yellow('AUC: AE {0:.4f} AE(compare) {1:.4f} AE(normalized) {2:.4f} MP: {3:.4f}'.format(AE_auc, AE_auc1, AE_auc_n, MP_auc))
 	print(model_name)
@@ -157,20 +169,25 @@ with tf.Session() as sess:
 	np.savetxt(os.path.join(result_folder,'anom_stat1.txt'), anom_recon_errs1)
 	np.savetxt(os.path.join(result_folder,'anom_stat2.txt'), anom_recon_errs2)
 	np.savetxt(os.path.join(result_folder,'anom_stat3.txt'), anom_recon_errs3)
+	np.savetxt(os.path.join(result_folder,'anom_stat4.txt'), anom_recon_errs4)
+
 	## plot err histogram and recon images
 	idx, idx1, idx2, idx3 = int(len(recon_errs)*1/5), int(len(recon_errs)*2/5), int(len(recon_errs)*3/5), int(len(recon_errs)*4/5)
 	err_stat_list = [recon_errs[:idx], recon_errs[idx:idx1], recon_errs[idx1:idx2], recon_errs[idx2:idx3],recon_errs[idx3:]]
-	min_value, max_value = np.min(recon_errs), np.max(recon_errs)
+	min_value, max_value = np.min(total_errs), np.max(total_errs)
 	print_green('Length: norm {} anom1 {} anom2 {} anom3 {}'.format(len(recon_errs[:idx1]), len(recon_errs[idx1:idx2]), len(recon_errs[idx2:idx3]), len(recon_errs[idx3:])))
-	plot_hist_list(result_folder+'/hist-d-norm-{}.png'.format(model_name), err_stat_list, ['Norm', 'Ano-fact4', 'Ano-fact2', 'Ano-fact2-mix', 'Ano-fact4-mix'], ['g', 'c', 'r', 'b', 'y'], [min_value, max_value])
-	plot_hist_list(result_folder+'/hist0-{}-{}.png'.format(version1, model_name), [recon_errs[:idx], recon_errs[idx:idx1]], ['Norm', 'Ano-fact4'], ['g', 'c'], [min_value, max_value])
-	plot_hist_list(result_folder+'/hist1-{}-{}.png'.format(version2, model_name), [recon_errs[:idx], recon_errs[idx1:idx2]], ['Norm', 'Ano-fact2'], ['g', 'r'], [min_value, max_value])
-	plot_hist_list(result_folder+'/hist2-{}-{}.png'.format(version3, model_name), [recon_errs[:idx], recon_errs[idx2:idx3]], ['Norm', 'Ano-fact2-mix'], ['g', 'b'], [min_value, max_value])
-	plot_hist_list(result_folder+'/hist3-{}-{}.png'.format(version4, model_name), [recon_errs[:idx], recon_errs[idx3:]], ['Norm','Ano-fact4-mix'], ['g', 'y'], [min_value, max_value])
+	plot_hist_list(result_folder+'/hist-d-true-{}.png'.format(model_name), err_stat_list, ['True', 'f_meas_x4', 'f_meas_null_x2', 'f_meas_x2', 'f_meas_x3'], ['g', 'c', 'r', 'b', 'y'], [min_value, max_value])
+	plot_hist_list(result_folder+'/hist-{}-{}.png'.format('meas_4x', model_name), [recon_errs[:idx], recon_errs[idx:idx1]], ['f_true', 'f_meas_4x'], ['g', 'c'], [min_value, max_value])
+	plot_hist_list(result_folder+'/hist-{}-{}.png'.format('null_2x', model_name), [recon_errs[:idx], recon_errs[idx1:idx2]], ['f_true', 'f_null_2x'], ['g', 'r'], [min_value, max_value])
+	plot_hist_list(result_folder+'/hist-{}-{}.png'.format('meas_2x', model_name), [recon_errs[:idx], recon_errs[idx2:idx3]], ['f_true', 'f_meas_2x'], ['g', 'b'], [min_value, max_value])
+	plot_hist_list(result_folder+'/hist-{}-{}.png'.format('meas_3x', model_name), [recon_errs[:idx], recon_errs[idx3:]], ['f_true','f_meas_3x'], ['g', 'y'], [min_value, max_value])
+	plot_hist_list(result_folder+'/hist-{}-{}.png'.format('null_mixed_4x', model_name), [recon_errs[:idx], anom_recon_errs4], ['f_true','f_mixed_4x'], ['g', 'y'], [min_value, max_value])
 	save_recon_images_v2(result_folder+'/recon-{}.png'.format(model_name), Xt, recons, err_maps, fig_size = [11,10])
-	save_recon_images_v3(result_folder+'/recon_x4-meas{}.png'.format(model_name), X_SP_tst, Ya, anom_err_map, fig_size = [11,20])
-	save_recon_images_v3(result_folder+'/recon_x4-mix{}.png'.format(model_name), X_SP_tst3, Ya3, anom_err_map3, fig_size = [11,20])
-	save_recon_images_v3(result_folder+'/recon_norm-{}.png'.format(model_name), X_SA_tst, Yn, norm_err_map, fig_size = [11,20])
+	save_recon_images_v3(result_folder+'/recon_meas_4x-{}.png'.format(model_name), X_SP_tst, Ya, anom_err_map, fig_size = [11,20])
+	save_recon_images_v3(result_folder+'/recon_meas_3x-{}.png'.format(model_name), X_SP_tst3, Ya3, anom_err_map3, fig_size = [11,20])
+	save_recon_images_v3(result_folder+'/recon_null_mixed_4x-{}.png'.format(model_name), Xa, Ya4, anom_err_map4, fig_size = [11,20])
+	save_recon_images_v3(result_folder+'/recon_true-{}.png'.format(model_name), X_SA_tst, Yn, norm_err_map, fig_size = [11,20])
+	matplotlib.pyplot.imsave(result_folder+ '/closest_null_mixed_4x.png', np.squeeze(Ya4[np.argmin(anom_recon_errs4),:]))
 	err_distance = np.abs(norm_recon_errs-anom_recon_errs3)
 	err_distance_copy = np.copy(err_distance)
 	distance_map = np.abs(np.tile(norm_recon_errs.reshape(-1,1), (1, len(norm_recon_errs)))-np.tile(anom_recon_errs3.reshape(1,-1), (len(anom_recon_errs3), 1)))

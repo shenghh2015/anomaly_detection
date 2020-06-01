@@ -68,7 +68,7 @@ else:
 	output_folder = './data/MRI'
 
 ## model folder
-model_name = 'AEL{}-{}-cn-{}-fr-{}-ks-{}-bn-{}-lr-{}-stps-{}-bz-{}-tr-{}k-vl-{}-test-{}-l-{}'.format(version, os.path.basename(output_folder), nb_cnn, filters, kernel_size, batch_norm, lr, nb_steps, batch_size, int(train/1000), val, test, loss)
+model_name = 'AEL{}-{}-cn-{}-fr-{}-ks-{}-bn-{}-lr-{}-stps-{}-bz-{}-tr-{}k-vl-{}-test-{}-l-{}-ano_w-{}'.format(version, os.path.basename(output_folder), nb_cnn, filters, kernel_size, batch_norm, lr, nb_steps, batch_size, int(train/1000), val, test, loss, ano_weight)
 model_folder = os.path.join(output_folder, model_name)
 generate_folder(model_folder)
 
