@@ -8,4 +8,5 @@
 
 ## May 15, 2020
 # python AE_train.py --gpu 1 --cn 6 --fr 32 --ks 5 --bn False --lr 1e-4 --step 100000 --bz 50 --train 65000 --val 400 --test 1000
-python AE_train.py --gpu 1 --cn 4 --fr 32 --ks 5 --bn False --lr 1e-4 --step 100000 --bz 50 --version 3 --train 65000 --val 400 --test 1000
+# python AE_train.py --gpu 1 --cn 4 --fr 32 --ks 5 --bn False --lr 1e-4 --step 100000 --bz 50 --version 3 --train 65000 --val 400 --test 1000
+python AE_labels.py --gpu 2 --cn 4 --fr 32 --ks 5 --bn True --lr 1e-4 --step 200000 --bz 50 --version 1 --train 65000 --val 400 --test 1000 --loss mae --ano_weight 0.02
