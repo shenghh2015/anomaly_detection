@@ -71,9 +71,9 @@ model_folder = os.path.join(output_folder, model_name)
 dim = 256
 ## load data
 print_red('Data loading ...')
-Xn = load_MRI_anomaly_test('true')
-Xa2, Xa3, Xa4 = load_MRI_anomaly_test('meas_2x'), load_MRI_anomaly_test('meas_3x'), load_MRI_anomaly_test('meas_4x')
-Xam2, Xam4 = load_MRI_anomaly_test('null_mixed_2x'), load_MRI_anomaly_test('null_mixed_4x')
+Xn = load_MRI_anomaly_test(dataset = 'true')
+Xa2, Xa3, Xa4 = load_MRI_anomaly_test(dataset = 'meas_2x'), load_MRI_anomaly_test(dataset = 'meas_3x'), load_MRI_anomaly_test(dataset = 'meas_4x')
+Xam2, Xam4 = load_MRI_anomaly_test(dataset = 'null_mixed_2x'), load_MRI_anomaly_test(dataset = 'null_mixed_4x')
 Xn, Xa2, Xa3, Xa4, Xam2, Xam4 = normalize_0_1(Xn), normalize_0_1(Xa2), normalize_0_1(Xa3), normalize_0_1(Xa4), normalize_0_1(Xam2), normalize_0_1(Xam4)
 
 # create a graph

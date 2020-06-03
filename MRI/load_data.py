@@ -81,6 +81,7 @@ def load_MRI_anomaly_test(docker = True, dataset = 'null_mixed_4x'):
 		dataset_folder = '/data/datasets/MRI'
 	else:
 		dataset_folder = '/shared/planck/CommonData/MRI/anomaly_detection_data'
+
 	if dataset == 'null_mixed_4x':
 		img_MP =  np.load(os.path.join(dataset_folder, 'axial_batch2_256x256_test_null_mixed_mask_4x_1000.npy'))
 	elif dataset == 'meas_4x':
@@ -98,6 +99,7 @@ def load_MRI_anomaly_test(docker = True, dataset = 'null_mixed_4x'):
 	elif dataset == 'true':
 		img = np.load(os.path.join(dataset_folder, 'axial_batch2_256x256.npy'))
 		img_MP = img[-1000:,:]
+
 	return img_MP
 
 def load_MRI_anomaly_labels(docker = False, train = 65000, val = 200, normal = 1000, anomaly = 1000, noise_level = 0, us_factor = 4, version = 1):
