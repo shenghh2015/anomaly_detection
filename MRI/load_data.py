@@ -1,4 +1,6 @@
 import numpy as np
+import os
+import glob
 
 # def load_MRI_true_data(docker = False, train = 65000, val = 600, normal = 1000, anomaly = 1000):
 # 	if docker:
