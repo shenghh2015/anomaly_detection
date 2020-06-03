@@ -1,7 +1,4 @@
-import os
-import glob
 import numpy as np
-from sklearn.metrics import roc_auc_score
 
 # def load_MRI_true_data(docker = False, train = 65000, val = 600, normal = 1000, anomaly = 1000):
 # 	if docker:
@@ -87,6 +84,18 @@ def load_MRI_anomaly_test(docker = True, dataset = 'null_mixed_4x'):
 	elif dataset == 'meas_4x':
 		img_MP =  np.load(os.path.join(dataset_folder, 'axial_batch2_256x256_artifact.npy'))
 		img_MP = img_MP[-1000:,:]
+	elif dataset == 'meas_3x':
+		img_MP =  np.load(os.path.join(dataset_folder, 'axial_batch2_256x256_artifact-3_noise-0.0.npy'))
+		img_MP = img_MP[-1000:,:]
+	elif dataset == 'meas_2x':
+		img_MP =  np.load(os.path.join(dataset_folder, 'axial_batch2_256x256_artifact-2_noise-0.0.npy'))
+		img_MP = img_MP[-1000:,:]
+	elif dataset == 'null_mixed_2x':
+		img_MP =  np.load(os.path.join(dataset_folder, 'axial_batch2_256x256_test_null_mixed_mask_2x_1000.npy'))
+		img_MP = img_MP[-1000:,:]
+	elif dataset == 'true':
+		img = np.load(os.path.join(dataset_folder, 'axial_batch2_256x256.npy'))
+		img_MP = img[-1000:,:]
 	return img_MP
 
 def load_MRI_anomaly_labels(docker = False, train = 65000, val = 200, normal = 1000, anomaly = 1000, noise_level = 0, us_factor = 4, version = 1):
